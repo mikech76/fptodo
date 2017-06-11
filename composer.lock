@@ -1,0 +1,61 @@
+{
+    "_readme": [
+        "This file locks the dependencies of your project to a known state",
+        "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
+        "This file is @generated automatically"
+    ],
+    "hash": "21651317ae0b56899d061b90d352787c",
+    "content-hash": "cf18fb6276b64d12110bb385a31feaf4",
+    "packages": [
+        {
+            "name": "colshrapnel/safemysql",
+            "version": "1.0.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/colshrapnel/safemysql.git",
+                "reference": "9360eabc1cff7729bec004c5944ae1cccdd1e35c"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/colshrapnel/safemysql/zipball/9360eabc1cff7729bec004c5944ae1cccdd1e35c",
+                "reference": "9360eabc1cff7729bec004c5944ae1cccdd1e35c",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=5.0.0"
+            },
+            "type": "library",
+            "autoload": {
+                "files": [
+                    "safemysql.class.php"
+                ]
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "Apache-2.0"
+            ],
+            "authors": [
+                {
+                    "name": "Colonel Shrapnel",
+                    "email": "col.shrapnel@gmail.com",
+                    "role": "lead"
+                }
+            ],
+            "description": "A real safe and convenient way to handle MySQL queries.",
+            "homepage": "https://github.com/colshrapnel/safemysql",
+            "keywords": [
+                "db",
+                "mysql"
+            ],
+            "time": "2015-05-08 05:59:39"
+        }
+    ],
+    "packages-dev": [],
+    "aliases": [],
+    "minimum-stability": "stable",
+    "stability-flags": [],
+    "prefer-stable": false,
+    "prefer-lowest": false,
+    "platform": [],
+    "platform-dev": []
+}

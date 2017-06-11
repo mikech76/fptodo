@@ -1,0 +1,19 @@
+{
+    "name": "mikech76/fptodo",
+    "description": "ToDo",
+    "authors": [
+        {
+            "name": "mikech",
+            "email": "mikech76@gmail.com"
+        }
+    ],
+    "require": {
+        "colshrapnel/safemysql": "^1.0",
+        "phpunit/phpunit": "dev-master"
+    },
+    "autoload": {
+        "psr-4": {
+            "": "src/"
+        }
+    }
+}
