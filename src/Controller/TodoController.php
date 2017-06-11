@@ -4,12 +4,23 @@ namespace Controller;
 
 use Core\Controller;
 use Core\Request;
+use Core\Model;
 use Core\View;
 use Model\User;
 use Model\TodoList;
+
 //use Model\TodoTask;
 
-define();
+define("SHARE_DELETE", 0);
+define("SHARE_OWNER", 1);
+define("SHARE_EDIT", 2);
+define("SHARE_SEE", 3);
+
+define("TASK_DELETE", 0);
+define("TASK_OPEN", 1);
+define("TASK_CLOSE", 2);
+
+
 class TodoController extends Controller
 {
     /**
@@ -32,18 +43,16 @@ class TodoController extends Controller
             $this->data['user'] = $this->userActions();
 
             // Операции со Списками
-            $this->todoListActions();
-
+            $this->data['todolist'] = $this->todoListActions();
 
             // Операции с Задачами
 
         } catch (TodoException $e) {
-            self::setSession();
+            //session_destroy();
+            d($e->get());
             die();
-            // todo
+            // @todo return http
         }
-        d($this->data['user'] );
-
 
         // создаем стандартный Вид
         $view = new View();
@@ -73,9 +82,7 @@ class TodoController extends Controller
                 $user = User::auth();
                 break;
         }
-
-        // авторизован
-        self::setSession($user->getId());
+        User::setSession('last_request', Request::getFloat('last_request'));
 
         return $user;
     }
@@ -93,29 +100,18 @@ class TodoController extends Controller
 
             // изменить список
             case 'todolist_update':
-                $todoList = TodoList::udate();
+                $todoList = TodoList::update();
                 break;
 
             // расшарить список
             case 'todolist_share':
-                $todoList = TodoList::toShare();
+                $todoList = TodoList::toShare($this->data['user']);
                 break;
         }
+
+        return $todoList;
     }
 
-    /**
-     * Обновить сессию
-     * @param int $userId
-     */
-    private static function setSession($userId = null)
-    {
-        if ($userId) {
-            $_SESSION['user_id'] = $userId;
-            $_SESSION['last_request'] = time();
-        } else {
-            session_destroy();
-        }
-    }
 
 }
 

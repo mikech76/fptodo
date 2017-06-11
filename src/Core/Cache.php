@@ -43,7 +43,6 @@ class Cache
      */
     public static function getInstance($modelName)
     {
-
         $modelName = strtr($modelName, '\\', '-');
         if (!array_key_exists($modelName, self::$_instance) || self::$_instance[$modelName] === null) {
             self::$_instance[$modelName] = new self($modelName);
@@ -52,7 +51,13 @@ class Cache
         return self::$_instance[$modelName];
     }
 
-    protected function _do($do, $id, $val = null)
+    /**
+     * @param $do
+     * @param $id
+     * @param mixed $value
+     * @return mixed
+     */
+    protected function _do($do, $id, $value = null)
     {
         $return = null;
         // начать сессию
@@ -69,7 +74,7 @@ class Cache
                 break;
 
             case 'set':
-                $_SESSION['id' . $id] = $val;
+                $_SESSION['id' . $id] = $value;
                 break;
 
             case 'delete':
@@ -83,7 +88,6 @@ class Cache
 
         return $return;
     }
-
 
     /**
      * Возвращает модель из кеша
@@ -102,6 +106,24 @@ class Cache
     public function set(Model $model)
     {
         $this->_do('set', $model->getId(), $model);
+    }
+
+    /**
+     * @param $key
+     * @return mixed
+     */
+    public function getValue($key)
+    {
+        return $this->_do('get', $key);
+    }
+
+    /**
+     * @param $key
+     * @param $value
+     */
+    public function setValue($key, $value)
+    {
+        $this->_do('set', $key, $value);
     }
 
     /**

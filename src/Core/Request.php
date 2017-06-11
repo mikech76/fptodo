@@ -41,4 +41,14 @@ class Request
         return (int)self::get($key, 0);
     }
 
+    /**
+     * Возвращает float
+     * @param $key
+     * @return float
+     */
+    static public function getFloat($key)
+    {
+        return (float)self::get($key, 0);
+    }
+
 }

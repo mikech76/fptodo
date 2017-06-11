@@ -24,7 +24,7 @@ class User extends Model
      * Логин
      * @var string
      */
-    private $login;
+    public $login;
 
     /**
      * Хеш пароля
@@ -37,6 +37,12 @@ class User extends Model
      * @var string
      */
     private $salt;
+
+    /**
+     * Списки
+     * @var string
+     */
+    private $todoLists;
 
     /**
      * User constructor.
@@ -153,7 +159,7 @@ class User extends Model
                 }
                 throw new TodoException('user_password_bad', 'Не верный пароль!');
             }
-            throw new TodoException('user_no_register', 'Пользователь "' . $login . '"" не зарегистрирован!');
+            throw new TodoException('user_not_exist', 'Пользователь "' . $login . '"" не зарегистрирован!');
         }
         throw new TodoException('user_login_bad', 'Недопустимый Логин');
     }
@@ -163,12 +169,9 @@ class User extends Model
      * @return User
      * @throws TodoException
      */
-    public
-    static function auth()
+    public static function auth()
     {
         $id = self::getSession('user_id');
-      //  $id = 1; // test
-
         if ($id) {
             // загружаем юзера
             $user = self::load($id);
@@ -185,8 +188,7 @@ class User extends Model
      * @param string $key
      * @return User
      */
-    public
-    static function load($param, $key = 'id')
+    public static function load($param, $key = 'id')
     {
         if ($param) {
             $cache = Cache::getInstance(__CLASS__);
@@ -214,9 +216,22 @@ class User extends Model
             }
         }
 
-
         return null;
-
     }
 
+    /**
+     * Возвращает все шары юзера
+     * @return array
+     */
+    public function loadShares()
+    {
+        $cache = Cache::getInstance(__CLASS__ . '-share');
+        $shares = $cache->get($this->getId());
+        if (!$shares) {
+            $db = Database::getInstance();
+            $shares = $db->getInd('todolist_id', 'SELECT * FROM share WHERE user_id=?i', $this->getId());
+        }
+
+        return $shares;
+    }
 }

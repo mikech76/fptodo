@@ -9,7 +9,7 @@ class Model
     /**
      * @var int;
      */
-    private $id;
+    public $id;
 
     /**
      * ошибки модели
@@ -67,7 +67,7 @@ class Model
      * @param $name
      * @param $value
      */
-    public static function setSession($name, $value)
+    public static function setSession($name, $value=null)
     {
         $_SESSION[$name] = $value;
     }
