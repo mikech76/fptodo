@@ -107,36 +107,43 @@ class User extends Model
      */
     public static function create()
     {
+        // имя юзера
         $login = substr(trim(Request::getSafeString('user_login')), 0, 30);
-        if ($login) {
+        if (!$login) {
+            throw new TodoException('user_login_bad', 'Недопустимый Логин');
+        }
 
-            $duplicate = self::load($login, 'login'); // Дубликат?
-
-            if (!$duplicate) {
-                $pass = substr(trim(Request::getSafeString('user_password')), 0, 30);
-                if ($pass) {
-                    $salt = md5(uniqid());
-                    $password = md5($login . $pass . $salt);
-                    //  создаем юзера
-                    $db = Database::getInstance();
-                    $db->query(
-                        'INSERT INTO user(login,password,salt) VALUES (?s,?s,?s)', $login, $password, $salt
-                    );
-                    $id = $db->insertId();
-                    if ($id) {
-                        // авторизуем юзера
-                        User::setSession('user_id', $id);
-                        $user = self::load($id);
-
-                        return $user;
-                    }
-                    throw new TodoException('user_create_error', 'Ошибка регистрации!');
-                }
-                throw new TodoException('user_password_bad', 'Недопустимый Пароль');
-            }
+        // проверка дубликата
+        $duplicate = self::load($login, 'login'); // Дубликат?
+        if ($duplicate) {
             throw new TodoException('user_login_occupyed', 'Имя "' . $login . '" занято!');
         }
-        throw new TodoException('user_login_bad', 'Недопустимый Логин');
+
+        // пароль
+        $pass = substr(trim(Request::getSafeString('user_password')), 0, 30);
+        if (!$pass) {
+            throw new TodoException('user_password_bad', 'Недопустимый Пароль');
+        }
+        $salt = md5(uniqid());
+        $password = md5($login . $pass . $salt);
+
+        //  создаем юзера
+        $db = Database::getInstance();
+        $db->query(
+            'INSERT INTO user(login,password,salt) VALUES (?s,?s,?s)', $login, $password, $salt
+        );
+
+        // запись создана
+        $id = $db->insertId();
+        if (!$id) {
+            throw new TodoException('user_create_error', 'Ошибка регистрации!');
+        }
+
+        // авторизуем юзера
+        User::setSession('user_id', $id);
+        $user = self::load($id);
+
+        return $user;
     }
 
     /**
@@ -145,23 +152,28 @@ class User extends Model
      */
     public static function login()
     {
+        // имя юзера
         $login = substr(trim(Request::getSafeString('user_login')), 0, 30);
-        if ($login) {
-            // загружаем юзера
-            $user = self::load($login, 'login');
-            if ($user) {
-                $pass = substr(trim(Request::getSafeString('user_password')), 0, 30);
-                $password = md5($login . $pass . $user->getSalt());
-                if ($password == $user->getPassword()) {
-                    User::setSession('user_id', $user->getId());
+        if (!$login) {
+            throw new TodoException('user_login_bad', 'Недопустимый Логин');
+        }
 
-                    return $user;
-                }
-                throw new TodoException('user_password_bad', 'Не верный пароль!');
-            }
+        // загружаем юзера
+        $user = self::load($login, 'login');
+        if (!$user) {
             throw new TodoException('user_not_exist', 'Пользователь "' . $login . '"" не зарегистрирован!');
         }
-        throw new TodoException('user_login_bad', 'Недопустимый Логин');
+
+        // сверка пароля
+        $pass = substr(trim(Request::getSafeString('user_password')), 0, 30);
+        $password = md5($login . $pass . $user->getSalt());
+        if ($password != $user->getPassword()) {
+            throw new TodoException('user_password_bad', 'Не верный пароль!');
+        }
+
+        User::setSession('user_id', $user->getId());
+
+        return $user;
     }
 
     /**
@@ -195,7 +207,6 @@ class User extends Model
 
             if (in_array($key, array('id', 'login'))) {
                 if ($key == 'id' && $user = $cache->get((int)$param)) {
-
                     return $user;
                 }
                 // из базы
@@ -210,7 +221,6 @@ class User extends Model
                     $user->setSalt($userData['salt']);
                     // в кеш
                     $cache->set($user);
-
                     return $user;
                 }
             }

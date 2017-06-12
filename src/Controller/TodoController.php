@@ -8,6 +8,7 @@ use Core\Model;
 use Core\View;
 use Model\User;
 use Model\TodoList;
+use Model\TodoTask;
 
 //use Model\TodoTask;
 
@@ -46,6 +47,7 @@ class TodoController extends Controller
             $this->data['todolist'] = $this->todoListActions();
 
             // Операции с Задачами
+            $this->data['todotask'] = $this->todoTaskActions();
 
         } catch (TodoException $e) {
             //session_destroy();
@@ -110,6 +112,25 @@ class TodoController extends Controller
         }
 
         return $todoList;
+    }
+   /**
+     * @return TodoTask
+     */
+    private function todoTaskActions()
+    {
+        switch (Request::get('action')) {
+            // создать задачу
+            case 'todotask_create':
+                $todoTask = TodoTask::create($this->data['user']);
+                break;
+
+            // изменить задачу
+            case 'todotask_update':
+                $todoTask = TodoTask::update();
+                break;
+        }
+
+        return $todoTask;
     }
 
 

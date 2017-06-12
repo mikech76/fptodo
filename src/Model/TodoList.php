@@ -45,23 +45,26 @@ class TodoList extends Model
      */
     public static function create(User $user)
     {
+        // имя листа
         $name = substr(trim(Request::getSafeString('todolist_name')), 0, 100);
-        if ($name) {
-            $db = Database::getInstance();
-            $db->query(
-                'INSERT INTO todolist(name,updated) VALUES (?s,?s)', $name, microtime(true)
-            );
-            $id = $db->insertId();
-            if ($id) {
-                $todoList = self::load($id);
-                // создаем шару с юзером
-                self::createShare($user, $todoList, SHARE_OWNER);
+        if (!$name) {
+            throw new TodoException('todolist_name_bad', 'Недопустимое имя списка');
+        }
 
-                return $todoList;
-            }
+        $db = Database::getInstance();
+        $db->query(
+            'INSERT INTO todolist(name,updated) VALUES (?s,?s)', $name, microtime(true)
+        );
+        $id = $db->insertId();
+        if (!$id) {
             throw new TodoException('todolist_create_error', 'Ошибка создания списка!');
         }
-        throw new TodoException('todolist_name_bad', 'Недопустимое имя списка');
+
+        // создаем шару с юзером
+        $todoList = self::load($id);
+        self::createShare($user, $todoList, SHARE_OWNER);
+
+        return $todoList;
     }
 
     /**
@@ -72,30 +75,35 @@ class TodoList extends Model
     public static function update()
     {
         $id = Request::getInteger('todolist_id');
-        if ($id) {
-            $name = substr(trim(Request::getSafeString('todolist_name')), 0, 100);
-            if ($name) {
-                $todoList = self::load($id);
-                if ($todoList) {
-                    // изменить имя списка
-                    $todoList->setName($name);
-                    $db = Database::getInstance();
-                    $db->query('UPDATE todolist SET ?u WHERE id=?i ',
-                        array('name' => $name, 'updated' => microtime(true)), $id
-                    );
-                    // очистить кеш
-                    $cache = Cache::getInstance(__CLASS__);
-                    $cache->delete($id);
+        if (!$id) {
+            throw new TodoException('todolist_id_bad', 'Не указан Id списка для обновления');
+        }
 
-                    $todoList = self::load($id);
-
-                    return $todoList;
-                }
-                throw new TodoException('todolist_not_exist', 'Не найден список ' . $id);
-            }
+        // имя листа
+        $name = substr(trim(Request::getSafeString('todolist_name')), 0, 100);
+        if (!$name) {
             throw new TodoException('todolist_name_bad', 'Недопустимое имя списка');
         }
-        throw new TodoException('todolist_id_bad', 'Не указан Id списка для обновления');
+
+        // список
+        $todoList = self::load($id);
+        if (!$todoList) {
+            throw new TodoException('todolist_not_exist', 'Не найден список ' . $id);
+        }
+
+        // изменить имя списка
+        $todoList->setName($name);
+        $db = Database::getInstance();
+        $db->query('UPDATE todolist SET ?u WHERE id=?i ',
+            array('name' => $name, 'updated' => microtime(true)), $id
+        );
+        // очистить кеш
+        $cache = Cache::getInstance(__CLASS__);
+        $cache->delete($id);
+
+        $todoList = self::load($id);
+
+        return $todoList;
     }
 
     /**
@@ -168,7 +176,8 @@ class TodoList extends Model
                 return self::createShare($user, $todoList, $mode);
             }
         }
-        throw new TodoException('todolist_share_not_permission', 'Не владелец списка');
+        // юзер не имеет связи со списком | не владелец списка | список удален
+        throw new TodoException('todolist_share_not_permission', 'Нет доступа к списку');
     }
 
     /**
