@@ -54,7 +54,6 @@ define('HOST', 'localhost'); //сервер
 define('USER', 'root'); //пользователь
 define('PASSWORD', 'root'); //пароль
 define('NAME_BD', 'todo');//база
-define('CACHESESSID', 'todo');// имя кеша
 
 //$db = \Core\Database::getInstance();
 

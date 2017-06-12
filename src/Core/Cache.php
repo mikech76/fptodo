@@ -8,9 +8,10 @@
 namespace Core;
 
 use Core\Model;
+use Core\Database;
 
 /**
- * Class Cache - Кеш на Сессиях
+ * Class Cache - Эмуляция Memcache
  * @package Core
  */
 class Cache
@@ -18,13 +19,11 @@ class Cache
     protected static $_instance = array();
 
     /**
-     * @var string Сессия клиента PHPSESSID
-     */
-    private $_phpSessid;
-    /**
      * @var string Сессия приложения/префикс
      */
     private $_cacheSessid;
+
+    private $db;
 
     /**
      * Cache constructor.
@@ -32,8 +31,8 @@ class Cache
      */
     protected function __construct($modelName)
     {
-        $this->_phpSessid = session_id();
-        $this->_cacheSessid = CACHESESSID . '-' . $modelName;
+        $this->db = Database::getInstance();
+        $this->_cacheSessid = $modelName;
     }
 
     /**
@@ -60,33 +59,39 @@ class Cache
     protected function _do($do, $id, $value = null)
     {
         $return = null;
-        // начать сессию
-        session_write_close();
-        session_id($this->_cacheSessid . $id);
-        session_start();
 
         switch ($do) {
             case 'get':
-                $return = array_key_exists('id' . $id, $_SESSION) ? $_SESSION['id' . $id] : null;
-                if (!$return) {
-                    session_destroy();
-                }
+                $return = $this->db->getOne(
+                    'SELECT val FROM memcache WHERE idkey=?s', $this->_cacheSessid . $id
+                );
+                return unserialize($return);
                 break;
 
             case 'set':
-                $_SESSION['id' . $id] = $value;
+                $data = array('idkey' => $this->_cacheSessid . $id, 'val' => serialize($value));
+                $this->db->query(
+                    'INSERT INTO memcache SET ?u ON DUPLICATE KEY UPDATE ?u', $data, $data
+                );
                 break;
 
             case 'delete':
-                session_destroy();
+                $this->db->query(
+                    'DELETE FROM memcache WHERE idkey=?s', $this->_cacheSessid . $id
+                );
         }
 
-        // закрыть сессию
-        session_write_close();
-        session_id($this->_phpSessid);
-        session_start();
-
         return $return;
+    }
+
+    /**
+     * очистить   кеш
+     */
+    public function clear()
+    {
+        $this->db->query(
+            'TRUNCATE TABLE memcache'
+        );
     }
 
     /**
@@ -130,9 +135,9 @@ class Cache
      * удаляет кеш модели
      * @param $key
      */
-    public function delete($id)
+    public function delete($key)
     {
-        $this->_do('delete', $id);
+        $this->_do('delete', $key);
     }
 
     private function __clone()
