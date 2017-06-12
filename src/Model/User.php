@@ -184,6 +184,7 @@ class User extends Model
     public static function auth()
     {
         $id = self::getSession('user_id');
+        session_write_close();
         if ($id) {
             // загружаем юзера
             $user = self::load($id);
@@ -284,5 +285,14 @@ class User extends Model
     {
         $cache = Cache::getInstance(__CLASS__ . '-share');
         $cache->setValue($this->getId(), $shares);
+    }
+
+    /**
+     * Удаляет все шары юзера из кеша
+     */
+    public function clearShares()
+    {
+        $cache = Cache::getInstance(__CLASS__ . '-share');
+        $cache->delete($this->getId());
     }
 }

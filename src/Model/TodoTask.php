@@ -121,6 +121,9 @@ class TodoTask extends Model
         }
         // список
         $todoList = TodoList::load($todoTask->getTodoListId());
+        if (!$todoList) {
+            throw new TodoException('todotask_todolist_not_exist', 'Не найден список ' . $todoTask->getTodoListId());
+        }
         // владелец связан со списком
         $shares = $todoList->loadShares();
         if (!array_key_exists($user->getId(), $shares)
@@ -167,6 +170,7 @@ class TodoTask extends Model
             // очистить кеш
             $cache = Cache::getInstance(__CLASS__);
             $cache->delete($id);
+            $user->clearShares();
 
             $todoTask = self::load($id);
             return $todoTask;
@@ -198,6 +202,7 @@ class TodoTask extends Model
             $todoTask->setName($todoTaskData['name']);
             $todoTask->setStatus($todoTaskData['status']);
             $todoTask->setUpdated($todoTaskData['updated']);
+            $todoTask->setTodoListId($todoTaskData['todolist_id']);
 
             // в кеш
             $cache->set($todoTask);

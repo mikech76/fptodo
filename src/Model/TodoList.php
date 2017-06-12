@@ -133,6 +133,7 @@ class TodoList extends Model
         // очистить кеш
         $cache = Cache::getInstance(__CLASS__);
         $cache->delete($id);
+        $user->clearShares();
 
         $todoList = self::load($id);
 

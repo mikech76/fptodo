@@ -68,17 +68,18 @@ class TodoController extends Controller
     private function sseActions()
     {
         if (Request::get('action') == 'sse') {
+            set_time_limit(0);
             header("Content-Type: text/event-stream\n\n");
             ob_end_flush();
-            set_time_limit(0);
+
+            $user = $user = User::auth();
             $lastEventId = isset($_SERVER["HTTP_LAST_EVENT_ID"]) ? $_SERVER["HTTP_LAST_EVENT_ID"] : 0;
             while (true) {
-                $this->sendEvent($lastEventId);
+                $lastEventId = $this->sendEvent($user, $lastEventId);
                 flush();
                 sleep(1);
-             }
-
-           // die();
+            }
+            die();
         }
     }
 
@@ -119,7 +120,7 @@ class TodoController extends Controller
                 $todoList = TodoList::choose($this->data['user']);
                 break;
 
-           // создать список
+            // создать список
             case 'todolist_create':
                 $todoList = TodoList::create($this->data['user']);
                 break;
@@ -166,18 +167,62 @@ class TodoController extends Controller
 
     /**
      * отправка порции Server-Sent Events в event-stream
-     * @param $lastEventId
+     * @param User $user
+     * @param float $lastEventId
+     * @return mixed $lastEventId
      */
-    private function sendEvent($lastEventId)
+    private function sendEvent($user, $lastEventId)
     {
-        $user = User::auth();
+        $data = $user->loadShares();
+        $data = $this->filterNew($data, $lastEventId);
 
-        $todoLists = $user->loadShares();
+        $lastEventId = microtime(true);
 
-        echo json_encode($todoLists);
+        if (!empty($data)) {
+            $message = array('user' => $user, 'todolist' => $data);
 
+            // Event
+            echo "id: " . $lastEventId . PHP_EOL;
+            echo "data: " . json_encode($message) . PHP_EOL;
+            echo PHP_EOL;
+        }
+        return $lastEventId;
     }
 
+    /**
+     * фильтрует только новые данные
+     * @param $data
+     * @param $lastEventId
+     */
+    private function filterNew($data, $lastEventId)
+    {
+        if (!$lastEventId) {
+            // нужны все данные
+            return $data;
+        }
+        // списки
+        foreach ($data as $listId => $list) {
+
+            // если share_updated новая - оставляем список - он новый для юзера
+            if ($list['share_updated'] > $lastEventId) {
+                continue;
+            }
+
+            // задачи
+            foreach ($list['todotask'] as $taskId => $task) {
+                // если task_updated старая - удаляем
+                if ($task['task_updated'] < $lastEventId) {
+                    unset($data[$listId]['todotask'][$taskId]);
+                }
+            }
+
+            // Если список устарел и у него нет задач - удалить
+            if ($list['todolist_updated'] < $lastEventId && empty($data[$listId]['todotask'])) {
+                unset($data[$listId]);
+            }
+        }
+        return $data;
+    }
 
 }
 
