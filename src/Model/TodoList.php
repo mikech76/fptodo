@@ -38,25 +38,6 @@ class TodoList extends Model
     public function __construct()
     {
         parent::__construct();
-
-    }
-
-    /**
-     * @param User $user
-     */
-    public static function choose(User $user)
-    {
-        $id = Request::getInteger('todolist_id');
-        if (!$id) {
-            throw new TodoException('todolist_id_bad', 'Не указан Id списка!');
-        }
-        // список
-        $todoList = self::load($id);
-        if (!$todoList) {
-            throw new TodoException('todolist_not_exist', 'Не найден список ' . $id);
-        }
-
-        return $todoList;
     }
 
     /**
@@ -239,10 +220,9 @@ class TodoList extends Model
             );
             $id = $db->insertId();
         }
-        // в кеш
-        $share = $db->getRow('SELECT * FROM share WHERE id=?i', $id);
-        $shares[$user->getId()] = $share;
-        $todoList->saveShares($shares);
+        // удалить кеш
+        $todoList->clearShares($shares);
+        $user->clearShares();
     }
 
     /**
@@ -255,7 +235,14 @@ class TodoList extends Model
         $shares = $cache->getValue($this->getId());
         if (!$shares) {
             $db = Database::getInstance();
-            $shares = $db->getInd('user_id', 'SELECT * FROM share WHERE todolist_id=?i', $this->getId());
+            $shares = $db->getInd(
+                'user_id',
+                'SELECT s.*, u.login
+                    FROM share AS s
+                    LEFT JOIN user AS u ON u.id=s.user_id
+                    WHERE s.todolist_id=?i',
+                $this->getId()
+            );
             $this->saveShares($shares);
         }
         return $shares;
@@ -268,6 +255,15 @@ class TodoList extends Model
     {
         $cache = Cache::getInstance(__CLASS__ . '-shares');
         $cache->setValue($this->getId(), $shares);
+    }
+
+    /**
+     * Удаляет все шары списка из кеша
+     */
+    public function clearShares()
+    {
+        $cache = Cache::getInstance(__CLASS__ . '-share');
+        $cache->delete($this->getId());
     }
 
     /**

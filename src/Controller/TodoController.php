@@ -4,7 +4,6 @@ namespace Controller;
 
 use Core\Controller;
 use Core\Request;
-use Core\Model;
 use Core\View;
 use Model\User;
 use Model\TodoList;
@@ -64,10 +63,11 @@ class TodoController extends Controller
 
     /**
      * Server-Sent Events / event-stream
+     * @test http://mikech.zapto.org/fptodo/?route=post&action=sse&todolist_id=12
      */
     private function sseActions()
     {
-        if (Request::get('action') == 'sse') {
+        if (Request::getSafeString('action') == 'sse') {
             set_time_limit(0);
             header("Content-Type: text/event-stream\n\n");
             ob_end_flush();
@@ -89,7 +89,7 @@ class TodoController extends Controller
      */
     private function userActions()
     {
-        switch (Request::get('action')) {
+        switch (Request::getSafeString('action')) {
             // Авторизация
             case 'user_login':
                 $user = User::login();
@@ -114,12 +114,7 @@ class TodoController extends Controller
      */
     private function todoListActions()
     {
-        switch (Request::get('action')) {
-            // выбрать текущий список
-            case 'todolist_choose':
-                $todoList = TodoList::choose($this->data['user']);
-                break;
-
+        switch (Request::getSafeString('action')) {
             // создать список
             case 'todolist_create':
                 $todoList = TodoList::create($this->data['user']);
@@ -147,7 +142,7 @@ class TodoController extends Controller
      */
     private function todoTaskActions()
     {
-        switch (Request::get('action')) {
+        switch (Request::getSafeString('action')) {
             // создать задачу
             case 'todotask_create':
                 $todoTask = TodoTask::create($this->data['user']);
@@ -175,7 +170,6 @@ class TodoController extends Controller
     {
         $data = $user->loadShares();
         $data = $this->filterNew($data, $lastEventId);
-
         $lastEventId = microtime(true);
 
         if (!empty($data)) {
@@ -196,18 +190,13 @@ class TodoController extends Controller
      */
     private function filterNew($data, $lastEventId)
     {
-        if (!$lastEventId) {
-            // нужны все данные
-            return $data;
+        $todoListId = Request::getInteger('todolist_id');
+        if (!array_key_exists($todoListId, $data)) {
+            $todoListId = array_keys($data)[0];
         }
+
         // списки
         foreach ($data as $listId => $list) {
-
-            // если share_updated новая - оставляем список - он новый для юзера
-            if ($list['share_updated'] > $lastEventId) {
-                continue;
-            }
-
             // задачи
             foreach ($list['todotask'] as $taskId => $task) {
                 // если task_updated старая - удаляем
@@ -219,11 +208,24 @@ class TodoController extends Controller
             // Если список устарел и у него нет задач - удалить
             if ($list['todolist_updated'] < $lastEventId && empty($data[$listId]['todotask'])) {
                 unset($data[$listId]);
+            } elseif ($todoListId != $listId) {
+                // если список не текущий - то удалить его задачи
+                $data[$listId]['todotask'] = array();
             }
+        }
+
+        // если есть текущий список. добавить юзерами
+        if (array_key_exists($todoListId, $data)) {
+            $todoList = TodoList::load($todoListId);
+            $share = $todoList->loadShares();
+            $userData = array();
+            foreach ($share as $user) {
+                $userData[$user['user_id']] = $user['login'];
+            }
+            $data[$todoListId]['user'] = $userData;
         }
         return $data;
     }
-
 }
 
 class TodoException extends \Exception
