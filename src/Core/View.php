@@ -38,7 +38,7 @@ class View
      * Вывод Server-side event строки
      * @param $data
      */
-    public function renderSse($data)
+    public function renderSSE($data)
     {
         $this->render('sse', $data, '');
     }

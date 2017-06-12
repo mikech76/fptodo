@@ -40,7 +40,7 @@ class TodoTask extends Model
 
     /**
      * время обновления
-     * @var int
+     * @var float
      */
     public $updated;
 
@@ -71,7 +71,7 @@ class TodoTask extends Model
         if (!$todoList) {
             throw new TodoException('todotask_todolist_not_exist', 'Не найден список ' . $todoListId);
         }
-        // влыделец связан со списком
+        // владелец связан со списком
         $shares = $todoList->loadShares();
         if (!array_key_exists($user->getId(), $shares)
             || !in_array($shares[$user->getId()]['mode'], array(SHARE_OWNER, SHARE_EDIT))
@@ -102,13 +102,37 @@ class TodoTask extends Model
 
     /**
      * Обновление списка
+     * @param User $user
+     * @return TodoTask
+     * @throws TodoException
      * @test http://mikech.zapto.org/fptodo/?route=post&action=todotask_update&todotask_id=4&todotask_status=2&todotask_name=швшлык
      */
-    public static function update()
+    public static function update(User $user)
     {
+        // Id задачи
         $id = Request::getInteger('todotask_id');
         if (!$id) {
             throw new TodoException('todotask_id_bad', 'Не указан Id задачи');
+        }
+        // задача
+        $todoTask = self::load($id);
+        if (!$todoTask) {
+            throw new TodoException('todotask_not_exist', 'Не найдена задача ' . $id);
+        }
+        // список
+        $todoList = TodoList::load($todoTask->getTodoListId());
+        // владелец связан со списком
+        $shares = $todoList->loadShares();
+        if (!array_key_exists($user->getId(), $shares)
+            || !in_array($shares[$user->getId()]['mode'], array(SHARE_OWNER, SHARE_EDIT))
+        ) {
+            throw new TodoException('todotask_todolist_not_permission', 'Нет доступа к списку');
+        }
+
+        // юзер - владелец | редактор, имеет право создавать задачу
+        $name = substr(trim(Request::getSafeString('todotask_name')), 0, 100);
+        if (!$name) {
+            throw new TodoException('todotask_name_bad', 'Недопустимое имя списка');
         }
 
         $fields = array();

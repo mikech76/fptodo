@@ -39,9 +39,13 @@ class TodoController extends Controller
      */
     public function index()
     {
+        // post запросы
         try {
             // Операции с Юзером
             $this->data['user'] = $this->userActions();
+
+            // открыть SSE
+            $this->sseActions();
 
             // Операции со Списками
             $this->data['todolist'] = $this->todoListActions();
@@ -50,16 +54,32 @@ class TodoController extends Controller
             $this->data['todotask'] = $this->todoTaskActions();
 
         } catch (TodoException $e) {
-            //session_destroy();
-            d($e->get());
-            die();
-            // @todo return http
+            $this->data['error'] = $e->get();
         }
 
-        // создаем стандартный Вид
+        // создаем Вид
         $view = new View();
         $view->renderJson($this->data);
-        //$view->renderStreamEvent($this->data);
+    }
+
+    /**
+     * Server-Sent Events / event-stream
+     */
+    private function sseActions()
+    {
+        if (Request::get('action') == 'sse') {
+            header("Content-Type: text/event-stream\n\n");
+            ob_end_flush();
+            set_time_limit(0);
+            $lastEventId = isset($_SERVER["HTTP_LAST_EVENT_ID"]) ? $_SERVER["HTTP_LAST_EVENT_ID"] : 0;
+            while (true) {
+                $this->sendEvent($lastEventId);
+                flush();
+                sleep(1);
+             }
+
+           // die();
+        }
     }
 
     /**
@@ -84,7 +104,6 @@ class TodoController extends Controller
                 $user = User::auth();
                 break;
         }
-        User::setSession('last_request', Request::getFloat('last_request'));
 
         return $user;
     }
@@ -95,25 +114,34 @@ class TodoController extends Controller
     private function todoListActions()
     {
         switch (Request::get('action')) {
-            // создать список
+            // выбрать текущий список
+            case 'todolist_choose':
+                $todoList = TodoList::choose($this->data['user']);
+                break;
+
+           // создать список
             case 'todolist_create':
                 $todoList = TodoList::create($this->data['user']);
                 break;
 
             // изменить список
             case 'todolist_update':
-                $todoList = TodoList::update();
+                $todoList = TodoList::update($this->data['user']);
                 break;
 
             // расшарить список
             case 'todolist_share':
                 $todoList = TodoList::toShare($this->data['user']);
                 break;
+
+            default:
+                $todoList = null;
         }
 
         return $todoList;
     }
-   /**
+
+    /**
      * @return TodoTask
      */
     private function todoTaskActions()
@@ -126,11 +154,28 @@ class TodoController extends Controller
 
             // изменить задачу
             case 'todotask_update':
-                $todoTask = TodoTask::update();
+                $todoTask = TodoTask::update($this->data['user']);
                 break;
+
+            default:
+                $todoTask = null;
         }
 
         return $todoTask;
+    }
+
+    /**
+     * отправка порции Server-Sent Events в event-stream
+     * @param $lastEventId
+     */
+    private function sendEvent($lastEventId)
+    {
+        $user = User::auth();
+
+        $todoLists = $user->loadShares();
+
+        echo json_encode($todoLists);
+
     }
 
 

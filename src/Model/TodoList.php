@@ -28,12 +28,35 @@ class TodoList extends Model
     public $name;
 
     /**
+     * @var float;
+     */
+    public $updated;
+
+    /**
      * TodoList constructor.
      */
     public function __construct()
     {
         parent::__construct();
 
+    }
+
+    /**
+     * @param User $user
+     */
+    public static function choose(User $user)
+    {
+        $id = Request::getInteger('todolist_id');
+        if (!$id) {
+            throw new TodoException('todolist_id_bad', 'Не указан Id списка!');
+        }
+        // список
+        $todoList = self::load($id);
+        if (!$todoList) {
+            throw new TodoException('todolist_not_exist', 'Не найден список ' . $id);
+        }
+
+        return $todoList;
     }
 
     /**
@@ -69,17 +92,20 @@ class TodoList extends Model
 
     /**
      * Обновление списка
+     * @param User $user
+     * @return TodoList
      * @throws TodoException
      * @test http://mikech.zapto.org/fptodo/?route=post&action=todolist_update&todolist_id=4&todolist_name=На%20рыбалку
      */
-    public static function update()
+    public static function update(User $user)
     {
+        // Id списка
         $id = Request::getInteger('todolist_id');
         if (!$id) {
             throw new TodoException('todolist_id_bad', 'Не указан Id списка для обновления');
         }
 
-        // имя листа
+        // имя списка
         $name = substr(trim(Request::getSafeString('todolist_name')), 0, 100);
         if (!$name) {
             throw new TodoException('todolist_name_bad', 'Недопустимое имя списка');
@@ -89,6 +115,13 @@ class TodoList extends Model
         $todoList = self::load($id);
         if (!$todoList) {
             throw new TodoException('todolist_not_exist', 'Не найден список ' . $id);
+        }
+        // владелец связан со списком
+        $shares = $todoList->loadShares();
+        if (!array_key_exists($user->getId(), $shares)
+            || !in_array($shares[$user->getId()]['mode'], array(SHARE_OWNER, SHARE_EDIT))
+        ) {
+            throw new TodoException('todolist_not_permission', 'Нет доступа к списку');
         }
 
         // изменить имя списка
@@ -128,7 +161,7 @@ class TodoList extends Model
             $todoList = new TodoList;
             $todoList->setId($todoListData['id']);
             $todoList->setName($todoListData['name']);
-
+            $todoList->setUpdated($todoListData['updated']);
             // в кеш
             $cache->set($todoList);
 
@@ -168,7 +201,7 @@ class TodoList extends Model
         if (!$user) {
             throw new TodoException('todolist_user_not_exist', 'Не найден юзер ' . $userId);
         }
-        // влыделец связан со списком
+        // владелец связан со списком
         $shares = $todoList->loadShares();
         if (array_key_exists($owner->getId(), $shares)) {
             if ($shares[$owner->getId()]['mode'] == SHARE_OWNER) {
@@ -224,7 +257,6 @@ class TodoList extends Model
             $shares = $db->getInd('user_id', 'SELECT * FROM share WHERE todolist_id=?i', $this->getId());
             $this->saveShares($shares);
         }
-
         return $shares;
     }
 
@@ -253,4 +285,19 @@ class TodoList extends Model
         $this->name = $name;
     }
 
+    /**
+     * @return int
+     */
+    public function getUpdated()
+    {
+        return $this->updated;
+    }
+
+    /**
+     * @param int $updated
+     */
+    public function setUpdated($updated)
+    {
+        $this->updated = $updated;
+    }
 }

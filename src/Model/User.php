@@ -239,9 +239,50 @@ class User extends Model
         $shares = $cache->get($this->getId());
         if (!$shares) {
             $db = Database::getInstance();
-            $shares = $db->getInd('todolist_id', 'SELECT * FROM share WHERE user_id=?i', $this->getId());
-        }
+            $sharesData = $db->getAll(
+                'SELECT s.user_id, s.todolist_id, s.`mode`, s.updated AS share_updated, 
+                             tl.name AS todolist_name, tl.updated AS todolist_updated,
+                             tt.id AS task_id, tt.name AS task_name, tt.`status`, tt.updated AS task_updated 
+                    FROM share AS s
+                    LEFT JOIN todolist AS tl ON tl.id=s.todolist_id
+                    LEFT JOIN todotask AS tt ON tl.id=tt.todolist_id
+                    WHERE s.user_id=?i', $this->getId());
 
+            $shares = array();
+            foreach ($sharesData as $t) {
+                // списки
+                if (!isset($shares[$t['todolist_id']])) {
+                    $shares[$t['todolist_id']] = array(
+                        'user_id'          => $t['user_id'],
+                        'todolist_id'      => $t['todolist_id'],
+                        'todolist_name'    => $t['todolist_name'],
+                        'todolist_mode'    => $t['mode'],
+                        'share_updated'    => $t['share_updated'],
+                        'todolist_updated' => $t['todolist_updated'],
+                        'todotask'         => array(),
+                    );
+                }
+                // таски
+                if ($t['task_id']) {
+                    $shares[$t['todolist_id']]['todotask'][$t['task_id']] = array(
+                        'task_id'      => $t['task_id'],
+                        'task_name'    => $t['task_name'],
+                        'status'       => $t['status'],
+                        'task_updated' => $t['task_updated'],
+                    );
+                }
+            }
+        }
+        $this->saveShares($shares);
         return $shares;
+    }
+
+    /**
+     * Сохраняет все шары юзера в кеш
+     */
+    public function saveShares($shares)
+    {
+        $cache = Cache::getInstance(__CLASS__ . '-share');
+        $cache->setValue($this->getId(), $shares);
     }
 }
