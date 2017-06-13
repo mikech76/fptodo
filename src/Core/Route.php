@@ -15,9 +15,7 @@ class Route
 {
     public function getController()
     {
-        if (isset($_REQUEST['route'])) {
-            $route = $_REQUEST['route'];
-        } else {
+        if (!$route = Request::getSafeString('route')) {
             $route = 'index';
         }
 
