@@ -222,7 +222,12 @@ class TodoController extends Controller
             $share = $todoList->loadShares();
             $userData = array();
             foreach ($share as $user) {
-                $userData[$user['user_id']] = $user['login'];
+                $userData[$user['user_id']] =
+                    array(
+                        'user_id' => $user['user_id'],
+                        'user_name' => $user['login'],
+                        'share_mode' => $user['mode'],
+                    );
             }
             $data[$todoListId]['user'] = $userData;
         }
