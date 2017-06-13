@@ -169,11 +169,17 @@ class TodoController extends Controller
     private function sendEvent($user, $lastEventId)
     {
         $data = $user->loadShares();
-        $data = $this->filterNew($data, $lastEventId);
+
+        $todoListId = Request::getInteger('todolist_id');
+        if (!array_key_exists($todoListId, $data)) {
+            $todoListId = array_keys($data)[0];
+        }
+
+        $data = $this->filterNew($data, $todoListId, $lastEventId);
         $lastEventId = microtime(true);
 
         if (!empty($data)) {
-            $message = array('user' => $user, 'todolist' => $data);
+            $message = array('user' => $user, 'current_todoList_id' => $todoListId, 'todolist' => $data);
 
             // Event
             echo "id: " . $lastEventId . PHP_EOL;
@@ -186,15 +192,11 @@ class TodoController extends Controller
     /**
      * фильтрует только новые данные
      * @param $data
+     * @param $todoListId
      * @param $lastEventId
      */
-    private function filterNew($data, $lastEventId)
+    private function filterNew($data, $todoListId, $lastEventId)
     {
-        $todoListId = Request::getInteger('todolist_id');
-        if (!array_key_exists($todoListId, $data)) {
-            $todoListId = array_keys($data)[0];
-        }
-
         // списки
         foreach ($data as $listId => $list) {
             // задачи
