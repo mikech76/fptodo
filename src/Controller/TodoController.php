@@ -224,9 +224,10 @@ class TodoController extends Controller
             foreach ($share as $user) {
                 $userData[$user['user_id']] =
                     array(
-                        'user_id' => $user['user_id'],
-                        'user_name' => $user['login'],
-                        'share_mode' => $user['mode'],
+                        'user_id'       => $user['user_id'],
+                        'user_name'     => $user['login'],
+                        'share_mode'    => $user['mode'],
+                        'share_updated' => $user['updated'],
                     );
             }
             $data[$todoListId]['user'] = $userData;
