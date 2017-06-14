@@ -259,7 +259,8 @@ class User extends Model
                         'todolist_name'    => $t['todolist_name'],
                         'todolist_mode'    => $t['mode'],
                         'share_updated'    => $t['share_updated'],
-                        'todolist_updated' => $t['todolist_updated'],
+                        //    'todolist_updated' => max($t['todolist_updated'], $t['share_updated']),
+                        'todolist_updated' => $t['share_updated'],
                         'todotask'         => array(),
                     );
                 }

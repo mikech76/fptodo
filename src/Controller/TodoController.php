@@ -174,19 +174,19 @@ class TodoController extends Controller
 
         $todoListId = Request::getInteger('todolist_id');
         if (!array_key_exists($todoListId, $data)) {
-            $todoListId = array_keys($data)[0];
+            //  $todoListId = array_keys($data)[0];
         }
 
         $data = $this->filterNew($data, $todoListId, $lastEventId);
         $lastEventId = microtime(true);
 
-/*
-        // test ping
-        echo "event: ping" . PHP_EOL;
-        echo "id: " . $lastEventId . PHP_EOL;
-        echo 'data: {"time": "' . date(DATE_ISO8601) . '"}';
-        echo PHP_EOL . PHP_EOL;
-*/
+        /*
+                       // test ping
+                       echo "event: ping" . PHP_EOL;
+                       echo "id: " . $lastEventId . PHP_EOL;
+                       echo 'data: {"time": "' . $lastEventId. ' = ' . date(DATE_ISO8601) . '"}';
+                       echo PHP_EOL . PHP_EOL;
+              */
 
         if (!empty($data)) {
             $message = array('user' => $user, 'current_todoList_id' => $todoListId, 'todolist' => $data);
@@ -205,10 +205,14 @@ class TodoController extends Controller
      * @param $todoListId
      * @param $lastEventId
      */
-    private function filterNew($data, $todoListId, $lastEventId)
+    private function filterNew($data, &$todoListId, $lastEventId)
     {
         // списки
         foreach ($data as $listId => $list) {
+            // выберем текущий живой список если не выделен
+            if (!$todoListId && $list['todolist_mode']) {
+                $todoListId = $listId;
+            }
             // задачи
             foreach ($list['todotask'] as $taskId => $task) {
                 // если task_updated старая - удаляем

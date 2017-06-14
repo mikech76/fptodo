@@ -6,3 +6,51 @@ remove this comment if used
 remove this file if not
 
 */
+
+#todolists, #shares {
+    width: 98%;
+}
+
+.user_on {
+    display: none;
+}
+
+.user_off {
+    display: block;
+}
+
+#error {
+    color: mediumvioletred;
+}
+
+.updated {
+    font-weight: bolder;
+    color: blue;
+}
+
+.todo_button {
+    font-size: 150%!important;
+    width: 25px;
+}
+
+.todo_button:hover {
+    color: blue;
+}
+
+.todolist_mode_1:before, .share_mode_1:before {
+    content: '👮 '; /* owner */
+
+}
+
+.todolist_mode_2:before, .share_mode_2:before {
+    content: '🎨 '; /* edit */
+
+}
+
+.todolist_mode_3:before , .share_mode_3:before{
+    content: '🐵 '; /* see */
+}
+
+#share_edit_edit, #share_edit_see, #share_edit_delete {
+    display: none;
+}

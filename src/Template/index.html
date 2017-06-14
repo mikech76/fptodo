@@ -6,11 +6,100 @@
 		<title>Template • TodoMVC</title>
 		<link rel="stylesheet" href="node_modules/todomvc-common/base.css">
 		<link rel="stylesheet" href="node_modules/todomvc-app-css/index.css">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
 		<!-- CSS overrides - remove if you don't need it -->
 		<link rel="stylesheet" href="css/app.css">
 	</head>
-	<body>
-		<section class="todoapp">
+    <body class="learn-bar">
+
+    <aside class="learn">
+
+		<div class="user_off" style="display: none">
+			<div id="login-form">
+				<h1><i class="fa fa-user" aria-hidden="true"></i> Login Form</h1>
+				<form>
+					<input type="text" name="user_login" placeholder="username">
+					<input type="password" name="user_password" placeholder="password">
+					<input type="submit" value="log in">
+				</form>
+			</div>
+
+			<div id="register-form">
+				<hr>
+				<h1><i class="fa fa-registered" aria-hidden="true"></i> Register Form</h1>
+				<form>
+					<input type="text" name="user_login" placeholder="username">
+					<input type="password" name="user_password" placeholder="password">
+					<input type="password" name="user_password2" placeholder="password">
+					<input type="submit" value="Register">
+				</form>
+			</div>
+		</div>
+
+		<div class="user_on" style="display: none">
+			<div id="user-panel">
+				<h1></h1>
+				<form>
+					<input id="logout" type="submit" value="Logout">
+				</form>
+			</div>
+
+			<div id="list-panel">
+				<hr>
+				<h1><i class="fa fa-list" aria-hidden="true"></i> Lists</h1>
+				<h2></h2>
+				<form>
+					<input type="text" id="todolist_new" placeholder="New ToDo List">
+						<b id="todolist_add" class="todo_button" title="Create New ToDo List">
+							<i class="fa fa-plus-circle" aria-hidden="true"></i>
+						</b>
+					<br>
+					<select name="todolists" id="todolists" size="1"></select>
+					<div>
+						<input type="text" id="todolist_editor" placeholder="Select ToDo List to Edit">
+							<b id="todolist_edit" class="todo_button" title="Rename ToDo List">
+								<i class="fa fa-pencil-square-o" aria-hidden="true"></i>
+							</b>
+							<b id="todolist_edit_delete" class="todo_button" title="Rename">
+								<i class="fa fa-minus-circle" aria-hidden="true"></i>
+							</b>
+					</div>
+				</form>
+			</div>
+
+			<div id="share-panel">
+				<hr>
+				<h1><i class="fa fa-share-alt-square" aria-hidden="true"></i> Share</h1>
+				<form>
+					<input type="text" id="share_new" placeholder="Share to user name">
+						<b id="share_add_edit" class="todo_button" title="Share to Edit">
+							🎨
+						</b>
+						<b id="share_add_see" class="todo_button" title="Share to See">
+							🐵
+						</b>
+
+					<select name="shares" id="shares" size="1"></select>
+					<div>
+						<input type="text" id="share_editor" placeholder="Select User to Edit" disabled>
+							<b id="share_edit_edit" class="todo_button" title="Share to Edit Mode">
+								🎨
+							</b>
+							<b id="share_edit_see" class="todo_button" title="Share to See Mode">
+								🐵
+							</b>
+							<b id="share_edit_delete" class="todo_button" title="Delete Share">
+								<i class="fa fa-ban" aria-hidden="true"></i>
+							</b>
+
+					</div>
+				</form>
+			</div>
+        </div>
+
+    </aside>
+
+    <section id="todoapp" class="todoapp" class="user_on">
 			<header class="header">
 				<h1>todos</h1>
 				<input class="new-todo" placeholder="What needs to be done?" autofocus>
@@ -61,15 +150,16 @@
 			</footer>
 		</section>
 		<footer class="info">
-			<p>Double-click to edit a todo</p>
-			<!-- Remove the below line ↓ -->
-			<p>Template by <a href="http://sindresorhus.com">Sindre Sorhus</a></p>
-			<!-- Change this out with your name and url ↓ -->
-			<p>Created by <a href="http://todomvc.com">you</a></p>
-			<p>Part of <a href="http://todomvc.com">TodoMVC</a></p>
+
+            <hr>
+			<p id="error"></p>
+
 		</footer>
 		<!-- Scripts here. Don't remove ↓ -->
-		<script src="node_modules/todomvc-common/base.js"></script>
+		<!--<script src="node_modules/todomvc-common/base.js"></script>-->
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore-min.js"></script>
+
 		<script src="js/app.js"></script>
 	</body>
 </html>
