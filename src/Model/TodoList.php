@@ -157,7 +157,7 @@ class TodoList extends Model
      * Создать связь
      * @param User $owner
      * @throws TodoException
-     * @test http://mikech.zapto.org/fptodo/?route=post&action=todolist_share&share_user_id=1&share_todolist_id=7&share_mode=2
+     * @test http://mikech.zapto.org/fptodo/?route=post&action=todolist_share&share_user_login=testuser2&share_todolist_id=7&share_mode=2
      */
     public static function toShare(User $owner)
     {
@@ -176,13 +176,10 @@ class TodoList extends Model
             throw new TodoException('todolist_not_exist', 'Не найден список ' . $todoListId);
         }
         // юзер для шары
-        $userId = Request::getInteger('share_user_id');
-        if (!$userId) {
-            throw new TodoException('todolist_user_id_bad', 'Не указан Id юзера для шары');
-        }
-        $user = User::load($userId);
+        $userName = Request::getSafeString('share_user_login');
+        $user = User::load($userName, 'login');
         if (!$user) {
-            throw new TodoException('todolist_user_not_exist', 'Не найден юзер ' . $userId);
+            throw new TodoException('todolist_user_not_exist', 'Не найден юзер ' . $userName);
         }
         // владелец связан со списком
         $shares = $todoList->loadShares();
@@ -222,7 +219,7 @@ class TodoList extends Model
             $id = $db->insertId();
         }
         // удалить кеш
-        $todoList->clearShares($shares);
+        $todoList->clearShares();
         $user->clearShares();
     }
 
@@ -263,7 +260,7 @@ class TodoList extends Model
      */
     public function clearShares()
     {
-        $cache = Cache::getInstance(__CLASS__ . '-share');
+        $cache = Cache::getInstance(__CLASS__ . '-shares');
         $cache->delete($this->getId());
     }
 
