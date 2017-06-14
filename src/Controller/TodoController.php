@@ -74,8 +74,10 @@ class TodoController extends Controller
 
             $user = $user = User::auth();
             $lastEventId = isset($_SERVER["HTTP_LAST_EVENT_ID"]) ? $_SERVER["HTTP_LAST_EVENT_ID"] : 0;
-            while (true) {
+            $count = 0;
+            while (++$count < 60) { // рвем соединение каждую минуту, а то апач виснет
                 $lastEventId = $this->sendEvent($user, $lastEventId);
+
                 flush();
                 sleep(1);
             }
@@ -178,13 +180,21 @@ class TodoController extends Controller
         $data = $this->filterNew($data, $todoListId, $lastEventId);
         $lastEventId = microtime(true);
 
+/*
+        // test ping
+        echo "event: ping" . PHP_EOL;
+        echo "id: " . $lastEventId . PHP_EOL;
+        echo 'data: {"time": "' . date(DATE_ISO8601) . '"}';
+        echo PHP_EOL . PHP_EOL;
+*/
+
         if (!empty($data)) {
             $message = array('user' => $user, 'current_todoList_id' => $todoListId, 'todolist' => $data);
 
             // Event
+            echo "event: todo" . PHP_EOL;
             echo "id: " . $lastEventId . PHP_EOL;
-            echo "data: " . json_encode($message) . PHP_EOL;
-            echo PHP_EOL;
+            echo "data: " . json_encode($message) . PHP_EOL . PHP_EOL;
         }
         return $lastEventId;
     }
@@ -219,15 +229,16 @@ class TodoController extends Controller
         // если есть текущий список. добавить юзерами
         if (array_key_exists($todoListId, $data)) {
             $todoList = TodoList::load($todoListId);
-            $share = $todoList->loadShares();
+            $shares = $todoList->loadShares();
             $userData = array();
-            foreach ($share as $user) {
-                $userData[$user['user_id']] =
+            foreach ($shares as $share) {
+                $userData[$share['id']] =
                     array(
-                        'user_id'       => $user['user_id'],
-                        'user_name'     => $user['login'],
-                        'share_mode'    => $user['mode'],
-                        'share_updated' => $user['updated'],
+                        'user_id'       => $share['user_id'],
+                        'user_name'     => $share['login'],
+                        'share_id'      => $share['id'],
+                        'share_mode'    => $share['mode'],
+                        'share_updated' => $share['updated'],
                     );
             }
             $data[$todoListId]['user'] = $userData;

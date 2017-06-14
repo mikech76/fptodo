@@ -154,6 +154,7 @@ class TodoList extends Model
     }
 
     /**
+     * Создать связь
      * @param User $owner
      * @throws TodoException
      * @test http://mikech.zapto.org/fptodo/?route=post&action=todolist_share&share_user_id=1&share_todolist_id=7&share_mode=2
