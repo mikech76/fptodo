@@ -38,14 +38,6 @@ class Model
     }
 
     /**
-     * @return array
-     */
-    public function getError()
-    {
-        return $this->error;
-    }
-
-    /**
      * возвращает модель в виде ассоциативного массива
      */
     public function getArray()

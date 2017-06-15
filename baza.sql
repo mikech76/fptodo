@@ -90,13 +90,3 @@ CREATE TABLE IF NOT EXISTS `user` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `login_idx` (`login`)
 ) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8;
-
--- Дамп данных таблицы todo.user: ~1 rows (приблизительно)
-/*!40000 ALTER TABLE `user` DISABLE KEYS */;
-REPLACE INTO `user` (`id`, `login`, `password`, `salt`) VALUES
-	(8, 'test1', '5c6eefa510b622d5fb11efa8baac63bb', '0679d9892209b671eadcd289ea32b259');
-/*!40000 ALTER TABLE `user` ENABLE KEYS */;
-
-/*!40101 SET SQL_MODE=IFNULL(@OLD_SQL_MODE, '') */;
-/*!40014 SET FOREIGN_KEY_CHECKS=IF(@OLD_FOREIGN_KEY_CHECKS IS NULL, 1, @OLD_FOREIGN_KEY_CHECKS) */;
-/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

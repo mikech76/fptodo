@@ -11,7 +11,7 @@ use Core\Model;
 use Core\Cache;
 use Core\Database;
 use Core\Request;
-use Controller\TodoException;
+use Core\MyException;
 
 /**
  * Class User
@@ -108,22 +108,16 @@ class User extends Model
     public static function create()
     {
         // имя юзера
-        $login = substr(trim(Request::getSafeString('user_login')), 0, 30);
-        if (!$login) {
-            throw new TodoException('user_login_bad', 'Недопустимый Логин');
-        }
+        $login = Request::getLogin('user_login', array('user_login_bad', 'Недопустимый Логин'));
 
         // проверка дубликата
         $duplicate = self::load($login, 'login'); // Дубликат?
         if ($duplicate) {
-            throw new TodoException('user_login_occupyed', 'Имя "' . $login . '" занято!');
+            MyException::go(array('user_login_occupyed', 'Имя "' . $login . '" занято!'));
         }
 
         // пароль
-        $pass = substr(trim(Request::getSafeString('user_password')), 0, 30);
-        if (!$pass) {
-            throw new TodoException('user_password_bad', 'Недопустимый Пароль');
-        }
+        $pass = Request::getPassword('user_password', array('user_password_bad', 'Недопустимый Пароль'));
         $salt = md5(uniqid());
         $password = md5($login . $pass . $salt);
 
@@ -135,13 +129,10 @@ class User extends Model
 
         // запись создана
         $id = $db->insertId();
-        if (!$id) {
-            throw new TodoException('user_create_error', 'Ошибка регистрации!');
-        }
+        $user = self::load($id, 'id', array('user_create_error', 'Ошибка регистрации!'));
 
         // авторизуем юзера
         User::setSession('user_id', $id);
-        $user = self::load($id);
 
         return $user;
     }
@@ -153,22 +144,18 @@ class User extends Model
     public static function login()
     {
         // имя юзера
-        $login = substr(trim(Request::getSafeString('user_login')), 0, 30);
-        if (!$login) {
-            throw new TodoException('user_login_bad', 'Недопустимый Логин');
-        }
+        $login = Request::getLogin('user_login', array('user_login_bad', 'Недопустимый Логин'));
 
         // загружаем юзера
-        $user = self::load($login, 'login');
-        if (!$user) {
-            throw new TodoException('user_not_exist', 'Пользователь "' . $login . '"" не зарегистрирован!');
-        }
+        $user = self::load($login, 'login',
+            array('user_not_exist', 'Пользователь "' . $login . '" не зарегистрирован!'));
 
         // сверка пароля
-        $pass = substr(trim(Request::getSafeString('user_password')), 0, 30);
+        $pass = Request::getPassword('user_password', array('user_password_bad', 'Недопустимый Пароль'));
+
         $password = md5($login . $pass . $user->getSalt());
         if ($password != $user->getPassword()) {
-            throw new TodoException('user_password_bad', 'Не верный пароль!');
+            MyException::go(array('user_password_bad', 'Не верный пароль!'));
         }
 
         User::setSession('user_id', $user->getId());
@@ -179,29 +166,22 @@ class User extends Model
     /**
      * Идентификация юзера
      * @return User
-     * @throws TodoException
+     * @throws MyException
      */
     public static function auth()
     {
         $id = self::getSession('user_id');
-        session_write_close();
-        if ($id) {
-            // загружаем юзера
-            $user = self::load($id);
-            if ($user) {
-                return $user;
-            }
-        }
-        throw new TodoException('user_no_auth', 'Пользователь не авторизован!');
+        return self::load($id, 'id', array('user_no_auth', 'Пользователь не авторизован!'));
     }
 
     /**
      * Загружает юзера
      * @param mixed $param
-     * @param string $key
+     * @param string $key {id|login}
      * @return User
+     * @throws MyException
      */
-    public static function load($param, $key = 'id')
+    public static function load($param, $key = 'id', $exteption = null)
     {
         if ($param) {
             $cache = Cache::getInstance(__CLASS__);
@@ -225,6 +205,10 @@ class User extends Model
                     return $user;
                 }
             }
+        }
+
+        if ($exteption) {
+            MyException::go($exteption);
         }
 
         return null;
@@ -258,9 +242,7 @@ class User extends Model
                         'todolist_id'      => $t['todolist_id'],
                         'todolist_name'    => $t['todolist_name'],
                         'todolist_mode'    => $t['mode'],
-                        'share_updated'    => $t['share_updated'],
-                        //    'todolist_updated' => max($t['todolist_updated'], $t['share_updated']),
-                        'todolist_updated' => $t['share_updated'],
+                        'todolist_updated' => max($t['todolist_updated'], $t['share_updated']),
                         'todotask'         => array(),
                     );
                 }

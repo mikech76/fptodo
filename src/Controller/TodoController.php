@@ -5,6 +5,7 @@ namespace Controller;
 use Core\Controller;
 use Core\Request;
 use Core\View;
+use Core\MyException;
 use Model\User;
 use Model\TodoList;
 use Model\TodoTask;
@@ -52,37 +53,13 @@ class TodoController extends Controller
             // Операции с Задачами
             $this->data['todotask'] = $this->todoTaskActions();
 
-        } catch (TodoException $e) {
+        } catch (MyException $e) {
             $this->data['error'] = $e->get();
         }
 
         // создаем Вид
         $view = new View();
         $view->renderJson($this->data);
-    }
-
-    /**
-     * Server-Sent Events / event-stream
-     * @test http://mikech.zapto.org/fptodo/?route=post&action=sse&todolist_id=12
-     */
-    private function sseActions()
-    {
-        if (Request::getSafeString('action') == 'sse') {
-            set_time_limit(0);
-            header("Content-Type: text/event-stream\n\n");
-            ob_end_flush();
-
-            $user = $user = User::auth();
-            $lastEventId = isset($_SERVER["HTTP_LAST_EVENT_ID"]) ? $_SERVER["HTTP_LAST_EVENT_ID"] : 0;
-            $count = 0;
-            while (++$count < 60) { // рвем соединение каждую минуту, а то апач виснет
-                $lastEventId = $this->sendEvent($user, $lastEventId);
-
-                flush();
-                sleep(1);
-            }
-            die();
-        }
     }
 
     /**
@@ -163,6 +140,32 @@ class TodoController extends Controller
     }
 
     /**
+     * Server-Sent Events / event-stream
+     * @test http://mikech.zapto.org/fptodo/?route=post&action=sse&todolist_id=12
+     */
+    private function sseActions()
+    {
+        if (Request::getSafeString('action') == 'sse') {
+            set_time_limit(0);
+            header("Content-Type: text/event-stream\n\n");
+            ob_end_flush();
+
+            $user = User::auth();
+
+            $lastEventId = isset($_SERVER["HTTP_LAST_EVENT_ID"]) ? $_SERVER["HTTP_LAST_EVENT_ID"] : 0;
+            $count = 0;
+            //  while (++$count < 60) {
+            while (1) {
+                $lastEventId = $this->sendEvent($user, $lastEventId);
+
+                flush();
+                sleep(1);
+            }
+            die();
+        }
+    }
+
+    /**
      * отправка порции Server-Sent Events в event-stream
      * @param User $user
      * @param float $lastEventId
@@ -170,45 +173,83 @@ class TodoController extends Controller
      */
     private function sendEvent($user, $lastEventId)
     {
-        $data = $user->loadShares();
+        // все все списки юзера
+        $todoLists = $user->loadShares(); // print_r($todoLists);
 
-        $todoListId = Request::getInteger('todolist_id');
-        if (!array_key_exists($todoListId, $data)) {
-            //  $todoListId = array_keys($data)[0];
-        }
+        // запрашивают список Id
+        $todoListId = Request::getId('todolist_id');
 
-        $data = $this->filterNew($data, $todoListId, $lastEventId);
+        // проверка id списка
+        list($newTodoListId, $lastEventId) = $this->findCurrentTodoListId($todoLists, $todoListId, $lastEventId);
+
+        // фильтруем лишнее
+        $todoLists = $this->filterNew($todoLists, $todoListId, $lastEventId);
+
+        // текущая метка
         $lastEventId = microtime(true);
 
-        /*
-                       // test ping
-                       echo "event: ping" . PHP_EOL;
-                       echo "id: " . $lastEventId . PHP_EOL;
-                       echo 'data: {"time": "' . $lastEventId. ' = ' . date(DATE_ISO8601) . '"}';
-                       echo PHP_EOL . PHP_EOL;
-              */
+        // test ping
+        // echo "event: ping" . PHP_EOL . "id: " . $lastEventId . PHP_EOL . 'data: {"time": "' . $lastEventId . ' = ' . date(DATE_ISO8601) . '"}' . PHP_EOL . PHP_EOL;
 
-        if (!empty($data)) {
-            $message = array('user' => $user, 'current_todoList_id' => $todoListId, 'todolist' => $data);
+        if (!empty($todoLists)) {
+            $message = array(
+                '$lastEventId'        => $lastEventId,
+                'user'                => $user,
+                'current_todoList_id' => $newTodoListId,
+                'todolist'            => $todoLists,
+            );
 
             // Event
             echo "event: todo" . PHP_EOL;
             echo "id: " . $lastEventId . PHP_EOL;
             echo "data: " . json_encode($message) . PHP_EOL . PHP_EOL;
         }
+
+        // сервер установил другой список
+        if ($newTodoListId != $todoListId) {
+            // recconect
+            //die();
+        }
         return $lastEventId;
     }
 
     /**
-     * фильтрует только новые данные
-     * @param $data
+     * Проверка текущего листа
+     * @param $todoLists
      * @param $todoListId
      * @param $lastEventId
+     * @return array [$todoListId,$lastEventId]
      */
-    private function filterNew($data, &$todoListId, $lastEventId)
+    private function findCurrentTodoListId($todoLists, $todoListId, $lastEventId)
+    {
+        // текущий лист не задан или чужой или удален
+        if (!$todoListId || !array_key_exists($todoListId, $todoLists) || !$todoLists[$todoListId]['todolist_mode']) {
+            // отдадим данные с начала
+            $lastEventId = 0;
+            $todoListId = null;
+            // установим список сами
+            foreach ($todoLists as $todoList) {
+                if ($todoList['todolist_mode']) {
+                    $todoListId = $todoList['todolist_id'];
+                    break;
+                }
+            }
+        }
+        return array($todoListId, $lastEventId);
+    }
+
+
+    /**
+     * Фильтрует только новые данные с последнего запроса
+     * @param array $todoLists - списки текущего юзера с шарами и таскамии
+     * @param int $todoListId - текущий список
+     * @param int $lastEventId - время последнего запроса
+     * @return array $todoLists - отфильтрованный массив
+     */
+    private function filterNew($todoLists, $todoListId, $lastEventId)
     {
         // списки
-        foreach ($data as $listId => $list) {
+        foreach ($todoLists as $listId => $list) {
             // выберем текущий живой список если не выделен
             if (!$todoListId && $list['todolist_mode']) {
                 $todoListId = $listId;
@@ -217,21 +258,21 @@ class TodoController extends Controller
             foreach ($list['todotask'] as $taskId => $task) {
                 // если task_updated старая - удаляем
                 if ($task['task_updated'] < $lastEventId) {
-                    unset($data[$listId]['todotask'][$taskId]);
+                    unset($todoLists[$listId]['todotask'][$taskId]);
                 }
             }
 
             // Если список устарел и у него нет задач - удалить
-            if ($list['todolist_updated'] < $lastEventId && empty($data[$listId]['todotask'])) {
-                unset($data[$listId]);
+            if ($list['todolist_updated'] < $lastEventId && empty($todoLists[$listId]['todotask'])) {
+                unset($todoLists[$listId]);
             } elseif ($todoListId != $listId) {
                 // если список не текущий - то удалить его задачи
-                $data[$listId]['todotask'] = array();
+                $todoLists[$listId]['todotask'] = array();
             }
         }
 
         // если есть текущий список. добавить юзерами
-        if (array_key_exists($todoListId, $data)) {
+        if (array_key_exists($todoListId, $todoLists)) {
             $todoList = TodoList::load($todoListId);
             $shares = $todoList->loadShares();
             $userData = array();
@@ -245,21 +286,8 @@ class TodoController extends Controller
                         'share_updated' => $share['updated'],
                     );
             }
-            $data[$todoListId]['user'] = $userData;
+            $todoLists[$todoListId]['user'] = $userData;
         }
-        return $data;
-    }
-}
-
-class TodoException extends \Exception
-{
-    public function __construct($error, $message, $code = 0, \Exception $previous = null)
-    {
-        parent::__construct(json_encode(array($error => $message)), $code, $previous);
-    }
-
-    public function get()
-    {
-        return json_decode($this->getMessage());
+        return $todoLists;
     }
 }

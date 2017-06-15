@@ -10,8 +10,8 @@ namespace Model;
 use Core\Model;
 use Core\Cache;
 use Core\Database;
+use Core\MyException;
 use Core\Request;
-use Controller\TodoException;
 
 /**
  * Class TodoList
@@ -44,28 +44,21 @@ class TodoList extends Model
      * Создание списка
      * @param User $user
      * @return TodoList
-     * @throws TodoException
+     * @throws MyException
      * @test http://mikech.zapto.org/fptodo/?route=post&action=todolist_create&todolist_name=На%20пикник
      */
     public static function create(User $user)
     {
-        // имя листа
-        $name = substr(trim(Request::getSafeString('todolist_name')), 0, 100);
-        if (!$name) {
-            throw new TodoException('todolist_name_bad', 'Недопустимое имя списка');
-        }
+        // имя списка
+        $name = Request::getName('todolist_name', array('todolist_name_bad', 'Недопустимое имя списка'));
 
         $db = Database::getInstance();
         $db->query(
             'INSERT INTO todolist(name,updated) VALUES (?s,?s)', $name, microtime(true)
         );
         $id = $db->insertId();
-        if (!$id) {
-            throw new TodoException('todolist_create_error', 'Ошибка создания списка!');
-        }
-
         // создаем шару с юзером
-        $todoList = self::load($id);
+        $todoList = self::load($id, array('todolist_create_error', 'Ошибка создания списка!'));
         self::createShare($user, $todoList, SHARE_OWNER);
 
         return $todoList;
@@ -75,35 +68,20 @@ class TodoList extends Model
      * Обновление списка
      * @param User $user
      * @return TodoList
-     * @throws TodoException
+     * @throws MyException
      * @test http://mikech.zapto.org/fptodo/?route=post&action=todolist_update&todolist_id=4&todolist_name=На%20рыбалку
      */
     public static function update(User $user)
     {
         // Id списка
-        $id = Request::getInteger('todolist_id');
-        if (!$id) {
-            throw new TodoException('todolist_id_bad', 'Не указан Id списка для обновления');
-        }
-
+        $id = Request::getId('todolist_id', array('todolist_id_bad', 'Не указан Id списка для обновления'));
         // имя списка
-        $name = substr(trim(Request::getSafeString('todolist_name')), 0, 100);
-        if (!$name) {
-            throw new TodoException('todolist_name_bad', 'Недопустимое имя списка');
-        }
+        $name = Request::getName('todolist_name', array('todolist_name_bad', 'Недопустимое имя списка'));
 
         // список
-        $todoList = self::load($id);
-        if (!$todoList) {
-            throw new TodoException('todolist_not_exist', 'Не найден список ' . $id);
-        }
-        // владелец связан со списком
-        $shares = $todoList->loadShares();
-        if (!array_key_exists($user->getId(), $shares)
-            || !in_array($shares[$user->getId()]['mode'], array(SHARE_OWNER, SHARE_EDIT))
-        ) {
-            throw new TodoException('todolist_not_permission', 'Нет доступа к списку');
-        }
+        $todoList = self::load($id, array('todolist_not_exist', 'Не найден список ' . $id));
+        // доступ
+        $todoList->checkUserAccess($user, array('todolist_not_permission', 'Нет доступа к списку'));
 
         // изменить имя списка
         $todoList->setName($name);
@@ -123,31 +101,40 @@ class TodoList extends Model
 
     /**
      * Загружает список
-     * @param int $id
-     * @return TodoList
+     * @param $id
+     * @param null $exteption
+     * @return TodoList|null
+     * @throws MyException
      */
-    public static function load($id)
+    public static function load($id, $exteption = null)
     {
-        // из кеша
-        $cache = Cache::getInstance(__CLASS__);
-        $todoList = $cache->get($id);
-        if ($todoList) {
-            return $todoList;
+        $id = (int)$id;
+        if ($id) {
+            // из кеша
+            $cache = Cache::getInstance(__CLASS__);
+            $todoList = $cache->get($id);
+            if ($todoList) {
+                return $todoList;
+            }
+            // из базы
+            $db = Database::getInstance();
+            $todoListData = $db->getRow('SELECT * FROM todolist WHERE id=?s', $id);
+
+            // если запись найдена, создаем объект
+            if ($todoListData) {
+                $todoList = new TodoList;
+                $todoList->setId($todoListData['id']);
+                $todoList->setName($todoListData['name']);
+                $todoList->setUpdated($todoListData['updated']);
+                // в кеш
+                $cache->set($todoList);
+
+                return $todoList;
+            }
         }
-        // из базы
-        $db = Database::getInstance();
-        $todoListData = $db->getRow('SELECT * FROM todolist WHERE id=?s', $id);
 
-        // если запись найдена, создаем объект
-        if ($todoListData) {
-            $todoList = new TodoList;
-            $todoList->setId($todoListData['id']);
-            $todoList->setName($todoListData['name']);
-            $todoList->setUpdated($todoListData['updated']);
-            // в кеш
-            $cache->set($todoList);
-
-            return $todoList;
+        if ($exteption) {
+            MyException::go($exteption );
         }
 
         return null;
@@ -156,7 +143,7 @@ class TodoList extends Model
     /**
      * Создать связь
      * @param User $owner
-     * @throws TodoException
+     * @throws MyException
      * @test http://mikech.zapto.org/fptodo/?route=post&action=todolist_share&share_user_login=testuser2&share_todolist_id=7&share_mode=2
      */
     public static function toShare(User $owner)
@@ -164,33 +151,19 @@ class TodoList extends Model
         // режим связи
         $mode = Request::getInteger('share_mode');
         if (!in_array($mode, array(SHARE_DELETE, SHARE_OWNER, SHARE_EDIT, SHARE_SEE))) {
-            throw new TodoException('share_mode_bad', 'Некорректный режим шары!');
+            MyException::go(array('share_mode_bad', 'Некорректный режим шары!'));
         }
         // список для шары
-        $todoListId = Request::getInteger('share_todolist_id');
-        if (!$todoListId) {
-            throw new TodoException('todolist_id_bad', 'Не указан Id списка для шары');
-        }
-        $todoList = self::load($todoListId);
-        if (!$todoList) {
-            throw new TodoException('todolist_not_exist', 'Не найден список ' . $todoListId);
-        }
+        $todoListId = Request::getId('share_todolist_id', array('todolist_id_bad', 'Не указан Id списка для шары'));
+        $todoList = self::load($todoListId, array('todolist_not_exist', 'Не найден список ' . $todoListId));
+
         // юзер для шары
-        $userName = Request::getSafeString('share_user_login');
-        $user = User::load($userName, 'login');
-        if (!$user) {
-            throw new TodoException('todolist_user_not_exist', 'Не найден юзер ' . $userName);
-        }
+        $userName = Request::getLogin('share_user_login');
+        $user = User::load($userName, 'login', array('todolist_user_not_exist', 'Не найден юзер ' . $userName));
+
         // владелец связан со списком
-        $shares = $todoList->loadShares();
-        if (array_key_exists($owner->getId(), $shares)) {
-            if ($shares[$owner->getId()]['mode'] == SHARE_OWNER) {
-                // юзер - владелец, имеет право шарить
-                return self::createShare($user, $todoList, $mode);
-            }
-        }
-        // юзер не имеет связи со списком | не владелец списка | список удален
-        throw new TodoException('todolist_share_not_permission', 'Нет доступа к списку');
+        $todoList->checkUserAccess($user, array(SHARE_OWNER), array('todolist_share_not_permission', 'Нет доступа к списку'));
+        return self::createShare($user, $todoList, $mode);
     }
 
     /**
@@ -198,7 +171,7 @@ class TodoList extends Model
      * @param User $user
      * @param TodoList $todoList
      * @param int $mode
-     * @throws TodoException
+     * @throws MyException
      */
     public static function createShare(User $user, TodoList $todoList, $mode)
     {
@@ -216,7 +189,7 @@ class TodoList extends Model
                 'INSERT INTO share(user_id,todolist_id,mode,updated) VALUES (?i,?i,?i,?s)',
                 $user->getId(), $todoList->getId(), $mode, microtime(true)
             );
-            $id = $db->insertId();
+            //$id = $db->insertId();
         }
         // удалить кеш
         $todoList->clearShares();
@@ -262,6 +235,28 @@ class TodoList extends Model
     {
         $cache = Cache::getInstance(__CLASS__ . '-shares');
         $cache->delete($this->getId());
+    }
+
+    /**
+     * Проверка доступа пользователя к списку
+     * @param User $user
+     * @param array $modes
+     * @param null $exception - кидать исключение при ошибке
+     * @return bool - есть запрашиваемый доступ
+     * @throws MyException
+     */
+    public function checkUserAccess(User $user, $modes, $exception = null)
+    {
+        // все связи со списком
+        $shares = $this->loadShares();
+
+        if (!array_key_exists($user->getId(), $shares) || !in_array($shares[$user->getId()]['mode'], $modes)) {
+            if ($exception) {
+                MyException::go($exception);
+            }
+            return false;
+        }
+        return true;
     }
 
     /**

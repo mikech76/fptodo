@@ -57,7 +57,10 @@ class Cache
      * @return mixed
      */
     protected function _do($do, $id, $value = null)
-    {return null;
+    {
+
+            return null;
+
         $return = null;
 
         switch ($do) {

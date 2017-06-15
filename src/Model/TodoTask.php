@@ -11,7 +11,7 @@ use Core\Model;
 use Core\Cache;
 use Core\Database;
 use Core\Request;
-use Controller\TodoException;
+use Core\MyException;
 
 /**
  * Class TodoTask
@@ -57,33 +57,25 @@ class TodoTask extends Model
      * Создание задачи
      * @param User $user
      * @return TodoTask
-     * @throws TodoException
+     * @throws MyException
      * @test http://mikech.zapto.org/fptodo/?route=post&action=todotask_create&todotask_todolist_id=10&todotask_name=Заправиться
      */
     public static function create(User $user)
     {
         // список для задачи
-        $todoListId = Request::getInteger('todotask_todolist_id');
-        if (!$todoListId) {
-            throw new TodoException('todotask_todolist_id_bad', 'Не указан Id списка!');
-        }
-        $todoList = TodoList::load($todoListId);
-        if (!$todoList) {
-            throw new TodoException('todotask_todolist_not_exist', 'Не найден список ' . $todoListId);
-        }
+        $todoListId = Request::getId('todotask_todolist_id', array('todotask_todolist_id_bad', 'Не указан Id списка!'));
+
+        $todoList = TodoList::load($todoListId, array('todotask_todolist_not_exist', 'Не найден список ' . $todoListId));
+
         // владелец связан со списком
-        $shares = $todoList->loadShares();
-        if (!array_key_exists($user->getId(), $shares)
-            || !in_array($shares[$user->getId()]['mode'], array(SHARE_OWNER, SHARE_EDIT))
-        ) {
-            throw new TodoException('todotask_todolist_not_permission', 'Нет доступа к списку');
-        }
+        $todoList->checkUserAccess(
+            $user,
+            array(SHARE_OWNER, SHARE_EDIT),
+            array('todolist_share_not_permission', 'Нет доступа к списку')
+        );
 
         // юзер - владелец | редактор, имеет право создавать задачу
-        $name = substr(trim(Request::getSafeString('todotask_name')), 0, 100);
-        if (!$name) {
-            throw new TodoException('todotask_name_bad', 'Недопустимое имя списка');
-        }
+        $name = Request::getName('todotask_name', array('todotask_name_bad', 'Недопустимое имя списка'));
 
         // создаем задачу
         $db = Database::getInstance();
@@ -92,10 +84,7 @@ class TodoTask extends Model
             $todoListId, $name, TASK_OPEN, microtime(true)
         );
         $id = $db->insertId();
-        if (!$id) {
-            throw new TodoException('todotask_create_error', 'Ошибка создания списка!');
-        }
-        $todoTask = self::load($id);
+        $todoTask = self::load($id, array('todotask_create_error', 'Ошибка создания списка!'));
 
         return $todoTask;
     }
@@ -104,87 +93,67 @@ class TodoTask extends Model
      * Обновление списка
      * @param User $user
      * @return TodoTask
-     * @throws TodoException
+     * @throws MyException
      * @test http://mikech.zapto.org/fptodo/?route=post&action=todotask_update&todotask_id=4&todotask_status=2&todotask_name=швшлык
      */
     public static function update(User $user)
     {
         // Id задачи
-        $id = Request::getInteger('todotask_id');
-        if (!$id) {
-            throw new TodoException('todotask_id_bad', 'Не указан Id задачи');
-        }
+        $id = Request::getId('todotask_id', array('todotask_id_bad', 'Не указан Id задачи'));
+
         // задача
-        $todoTask = self::load($id);
-        if (!$todoTask) {
-            throw new TodoException('todotask_not_exist', 'Не найдена задача ' . $id);
-        }
+        $todoTask = self::load($id, array('todotask_not_exist', 'Не найдена задача ' . $id));
+
         // список
-        $todoList = TodoList::load($todoTask->getTodoListId());
-        if (!$todoList) {
-            throw new TodoException('todotask_todolist_not_exist', 'Не найден список ' . $todoTask->getTodoListId());
-        }
+        $todoList = TodoList::load(
+            $todoTask->getTodoListId(),
+            array('todotask_todolist_not_exist', 'Не найден список ' . $todoTask->getTodoListId())
+        );
+
         // владелец связан со списком
-        $shares = $todoList->loadShares();
-        if (!array_key_exists($user->getId(), $shares)
-            || !in_array($shares[$user->getId()]['mode'], array(SHARE_OWNER, SHARE_EDIT))
-        ) {
-            throw new TodoException('todotask_todolist_not_permission', 'Нет доступа к списку');
-        }
+        $todoList->checkUserAccess(
+            $user,
+            array(SHARE_OWNER, SHARE_EDIT),
+            array('todolist_share_not_permission', 'Нет доступа к списку')
+        );
 
         // юзер - владелец | редактор, имеет право создавать задачу
-        $name = substr(trim(Request::getSafeString('todotask_name')), 0, 100);
-        if (!$name) {
-            throw new TodoException('todotask_name_bad', 'Недопустимое имя списка');
-        }
+        $name = Request::getName('todotask_name', array('todotask_name_bad', 'Недопустимое имя списка'));
 
         $fields = array();
-        // имя задачи
-        $name = Request::getSafeString('todotask_name');
-        if ($name) {
-            $name = substr(trim($name), 0, 100);
-            if (!$name) {
-                // имя задано но невалидно
-                throw new TodoException('todotask_name_bad', 'Недопустимое имя задачи');
-            }
-            $fields['name'] = $name;
-        }
+        $fields['name'] = $name;
 
         // статус задачи
         $status = Request::getInteger('todotask_status');
-        if ($status) {
-            $status = substr(trim($status), 0, 100);
-            if (!in_array($status, array(TASK_DELETE, TASK_OPEN, TASK_CLOSE))) {
-                // статус задан  но невалиден
-                throw new TodoException('todotask_status_bad', 'Недопустимый статус задачи');
-            }
-            $fields['status'] = $status;
+        if (!in_array($status, array(TASK_DELETE, TASK_OPEN, TASK_CLOSE))) {
+            // статус задан  но невалиден
+            MyException::go(array('todotask_status_bad', 'Недопустимый статус задачи'));
         }
+        $fields['status'] = $status;
 
         // изменить задачу
-        if ($fields) {
-            $fields['updated'] = microtime(true);
-            $db = Database::getInstance();
-            $db->query('UPDATE todotask SET ?u WHERE id=?i ', $fields, $id);
+        $fields['updated'] = microtime(true);
+        $db = Database::getInstance();
+        $db->query('UPDATE todotask SET ?u WHERE id=?i ', $fields, $id);
 
-            // очистить кеш
-            $cache = Cache::getInstance(__CLASS__);
-            $cache->delete($id);
-            $user->clearShares();
+        // очистить кеш
+        $cache = Cache::getInstance(__CLASS__);
+        $cache->delete($id);
+        $user->clearShares();
 
-            $todoTask = self::load($id);
-            return $todoTask;
-        }
-        return null;
+        $todoTask = self::load($id);
+        return $todoTask;
     }
 
     /**
      * Загружает задачу
      * @param int $id
      * @return TodoTask
+     * @throws MyException
      */
-    public static function load($id)
+    public static function load($id, $exteption = null)
     {
+        $id = (int)$id;
         // из кеша
         $cache = Cache::getInstance(__CLASS__);
         $todoTask = $cache->get($id);
@@ -209,6 +178,9 @@ class TodoTask extends Model
             return $todoTask;
         }
 
+        if ($exteption) {
+            MyException::go($exteption);
+        }
         return null;
     }
 
