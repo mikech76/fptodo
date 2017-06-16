@@ -51,7 +51,7 @@ class Model
      */
     public static function getSession($name)
     {
-        return (array_key_exists($name, $_SESSION) && $_SESSION[$name]) ? $_SESSION[$name] : null;
+        return (array_key_exists($name, $_COOKIE) && $_COOKIE[$name]) ? $_COOKIE[$name] : null;
     }
 
     /**
@@ -61,7 +61,7 @@ class Model
      */
     public static function setSession($name, $value=null)
     {
-        $_SESSION[$name] = $value;
+        setcookie($name, $value, strtotime('+1 Month'));
     }
 
     /**

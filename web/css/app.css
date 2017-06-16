@@ -7,6 +7,21 @@ remove this file if not
 
 */
 
+/* button logout */
+
+.share-control {
+    display: none;
+}
+
+.user_on .destroy {
+    visibility: hidden;
+    color: #af5b5e;
+}
+
+.set h1:hover .destroy {
+    visibility: visible;
+}
+
 #todolists, #shares {
     width: 98%;
 }
@@ -29,7 +44,7 @@ remove this file if not
 }
 
 .todo_button {
-    font-size: 150%!important;
+    font-size: 150% !important;
     width: 25px;
 }
 
@@ -47,10 +62,6 @@ remove this file if not
 
 }
 
-.todolist_mode_3:before , .share_mode_3:before{
+.todolist_mode_3:before, .share_mode_3:before {
     content: '🐵 '; /* see */
-}
-
-#share_edit_edit, #share_edit_see, #share_edit_delete {
-    display: none;
 }

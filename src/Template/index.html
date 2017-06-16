@@ -9,12 +9,14 @@
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
 		<!-- CSS overrides - remove if you don't need it -->
 		<link rel="stylesheet" href="css/app.css">
+
+
 	</head>
     <body class="learn-bar">
 
     <aside class="learn">
 
-		<div class="user_off" style="display: none">
+		<div class="user_off" style="display:none">
 			<div id="login-form">
 				<h1><i class="fa fa-user" aria-hidden="true"></i> Login Form</h1>
 				<form>
@@ -36,34 +38,31 @@
 			</div>
 		</div>
 
-		<div class="user_on" style="display: none">
-			<div id="user-panel">
-				<h1></h1>
-				<form>
-					<input id="logout" type="submit" value="Logout">
-				</form>
+		<div class="user_on" style="display:none">
+			<div id="user-panel" class="set">
+				<h1>
+					<i class="fa fa-user-circle" aria-hidden="true"></i>
+					<b class="user_name"></b>
+					<button class="destroy"><i class="fa fa-sign-out" aria-hidden="true"></i></button>
+				</h1>
 			</div>
 
 			<div id="list-panel">
 				<hr>
-				<h1><i class="fa fa-list" aria-hidden="true"></i> Lists</h1>
-				<h2></h2>
+				<h1>
+					<i class="fa fa-list" aria-hidden="true"></i>
+					<b id="todolist_name"></b>
+					<input id="todolist_editor" type="text">
+					<button class="destroy"><i class="fa fa-times" aria-hidden="true"></i></button>
+				</h1>
+
 				<form>
-					<input type="text" id="todolist_new" placeholder="New ToDo List">
-						<b id="todolist_add" class="todo_button" title="Create New ToDo List">
-							<i class="fa fa-plus-circle" aria-hidden="true"></i>
-						</b>
+
+					<input type="text" id="todolist_new" placeholder="New Todo List">
+					<br>
 					<br>
 					<select name="todolists" id="todolists" size="1"></select>
-					<div>
-						<input type="text" id="todolist_editor" placeholder="Select ToDo List to Edit">
-							<b id="todolist_edit" class="todo_button" title="Rename ToDo List">
-								<i class="fa fa-pencil-square-o" aria-hidden="true"></i>
-							</b>
-							<b id="todolist_edit_delete" class="todo_button" title="Rename">
-								<i class="fa fa-minus-circle" aria-hidden="true"></i>
-							</b>
-					</div>
+
 				</form>
 			</div>
 
@@ -71,26 +70,29 @@
 				<hr>
 				<h1><i class="fa fa-share-alt-square" aria-hidden="true"></i> Share</h1>
 				<form>
-					<input type="text" id="share_new" placeholder="Share to user name">
+					<div >
+						<input type="text" id="share_new" placeholder="Share to user name">
 						<b id="share_add_edit" class="todo_button" title="Share to Edit">
 							🎨
 						</b>
 						<b id="share_add_see" class="todo_button" title="Share to See">
 							🐵
 						</b>
-
+					</div>
+					<br>
 					<select name="shares" id="shares" size="1"></select>
-					<div>
+
+					<div class="share-control">
 						<input type="text" id="share_editor" placeholder="Select User to Edit" disabled>
-							<b id="share_edit_edit" class="todo_button" title="Share to Edit Mode">
-								🎨
-							</b>
-							<b id="share_edit_see" class="todo_button" title="Share to See Mode">
-								🐵
-							</b>
-							<b id="share_edit_delete" class="todo_button" title="Delete Share">
-								<i class="fa fa-ban" aria-hidden="true"></i>
-							</b>
+						<b id="share_edit_edit" class="todo_button" title="Share to Edit Mode">
+							🎨
+						</b>
+						<b id="share_edit_see" class="todo_button" title="Share to See Mode">
+							🐵
+						</b>
+						<b id="share_edit_delete" class="todo_button" title="Delete Share">
+							<i class="fa fa-ban" aria-hidden="true"></i>
+						</b>
 
 					</div>
 				</form>
@@ -100,66 +102,70 @@
     </aside>
 
     <section id="todoapp" class="todoapp" class="user_on">
-			<header class="header">
-				<h1>todos</h1>
-				<input class="new-todo" placeholder="What needs to be done?" autofocus>
-			</header>
-			<!-- This section should be hidden by default and shown when there are todos -->
-			<section class="main">
-				<input class="toggle-all" type="checkbox">
-				<label for="toggle-all">Mark all as complete</label>
-				<ul class="todo-list">
-					<!-- These are here just to show the structure of the list items -->
-					<!-- List items should get the class `editing` when editing and `completed` when marked as completed -->
-					<li class="completed">
-						<div class="view">
-							<input class="toggle" type="checkbox" checked>
-							<label>Taste JavaScript</label>
-							<button class="destroy"></button>
-						</div>
-						<input class="edit" value="Create a TodoMVC template">
-					</li>
-					<li>
-						<div class="view">
-							<input class="toggle" type="checkbox">
-							<label>Buy a unicorn</label>
-							<button class="destroy"></button>
-						</div>
-						<input class="edit" value="Rule the web">
-					</li>
-				</ul>
-			</section>
-			<!-- This footer should hidden by default and shown when there are todos -->
-			<footer class="footer">
-				<!-- This should be `0 items left` by default -->
-				<span class="todo-count"><strong>0</strong> item left</span>
-				<!-- Remove this if you don't implement routing -->
-				<ul class="filters">
-					<li>
-						<a class="selected" href="#/">All</a>
-					</li>
-					<li>
-						<a href="#/active">Active</a>
-					</li>
-					<li>
-						<a href="#/completed">Completed</a>
-					</li>
-				</ul>
-				<!-- Hidden if no completed items are left ↓ -->
-				<button class="clear-completed">Clear completed</button>
-			</footer>
+		<header class="header">
+			<h1>todos</h1>
+			<input class="new-todo" placeholder="What needs to be done?" autofocus>
+		</header>
+		<!-- This section should be hidden by default and shown when there are todos -->
+		<section class="main">
+			<input class="toggle-all" type="checkbox">
+			<label for="toggle-all">Mark all as complete</label>
+			<ul class="todo-list">
+				<!-- These are here just to show the structure of the list items -->
+				<!-- List items should get the class `editing` when editing and `completed` when marked as completed -->
+				<li class="completed">
+					<div class="view">
+						<input class="toggle" type="checkbox" checked>
+						<label>Taste JavaScript</label>
+						<button class="destroy"></button>
+					</div>
+					<input class="edit" value="Create a TodoMVC template">
+				</li>
+				<li>
+					<div class="view">
+						<input class="toggle" type="checkbox">
+						<label>Buy a unicorn</label>
+						<button class="destroy"></button>
+					</div>
+					<input class="edit" value="Rule the web">
+				</li>
+			</ul>
 		</section>
-		<footer class="info">
-
-            <hr>
-			<p id="error"></p>
-
+		<!-- This footer should hidden by default and shown when there are todos -->
+		<footer class="footer">
+			<!-- This should be `0 items left` by default -->
+			<span class="todo-count"><strong>0</strong> item left</span>
+			<!-- Remove this if you don't implement routing -->
+			<ul class="filters">
+				<li>
+					<a class="selected" href="#/">All</a>
+				</li>
+				<li>
+					<a href="#/active">Active</a>
+				</li>
+				<li>
+					<a href="#/completed">Completed</a>
+				</li>
+			</ul>
+			<!-- Hidden if no completed items are left ↓ -->
+			<button class="clear-completed">Clear completed</button>
 		</footer>
-		<!-- Scripts here. Don't remove ↓ -->
-		<!--<script src="node_modules/todomvc-common/base.js"></script>-->
-		<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
-		<script src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore-min.js"></script>
+	</section>
+	<footer class="info">
 
-		<script src="js/app.js"></script>
+		<hr>
+		<p id="error"></p>
+
+	</footer>
+	<!-- Scripts here. Don't remove ↓ -->
+	<!---->
+	<script src="node_modules/todomvc-common/base.js"></script>
+
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore-min.js"></script>
+
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+
+	<script src="js/app.js"></script>
+
 	</body>
 </html>

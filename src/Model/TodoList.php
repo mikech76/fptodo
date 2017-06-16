@@ -134,7 +134,7 @@ class TodoList extends Model
         }
 
         if ($exteption) {
-            MyException::go($exteption );
+            MyException::go($exteption);
         }
 
         return null;
@@ -144,6 +144,7 @@ class TodoList extends Model
      * Создать связь
      * @param User $owner
      * @throws MyException
+     * @return array
      * @test http://mikech.zapto.org/fptodo/?route=post&action=todolist_share&share_user_login=testuser2&share_todolist_id=7&share_mode=2
      */
     public static function toShare(User $owner)
@@ -161,9 +162,19 @@ class TodoList extends Model
         $userName = Request::getLogin('share_user_login');
         $user = User::load($userName, 'login', array('todolist_user_not_exist', 'Не найден юзер ' . $userName));
 
-        // владелец связан со списком
-        $todoList->checkUserAccess($user, array(SHARE_OWNER), array('todolist_share_not_permission', 'Нет доступа к списку'));
-        return self::createShare($user, $todoList, $mode);
+        // если это владелец списка
+        $right = $todoList->checkUserAccess($owner, array(SHARE_OWNER));
+        if ($right) {
+            // создаем шару
+            return self::createShare($user, $todoList, $mode);
+        } elseif (!$mode && $todoList->checkUserAccess($owner, array(SHARE_OWNER, SHARE_EDIT, SHARE_SEE))) {
+            // а если хочет удалить привязку к себе
+            // создаем шару
+            return self::createShare($user, $todoList, $mode);
+        }
+        MyException::go(array('todolist_share_not_permission', 'Нет доступа к списку'));
+
+        return null;
     }
 
     /**
@@ -171,6 +182,7 @@ class TodoList extends Model
      * @param User $user
      * @param TodoList $todoList
      * @param int $mode
+     * @return array
      * @throws MyException
      */
     public static function createShare(User $user, TodoList $todoList, $mode)
@@ -194,6 +206,8 @@ class TodoList extends Model
         // удалить кеш
         $todoList->clearShares();
         $user->clearShares();
+        $shares = $todoList->loadShares();
+        return $shares;
     }
 
     /**

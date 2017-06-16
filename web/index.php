@@ -45,6 +45,7 @@ function dd($var){
 
 use Core\Route;
 
+
 // Composer autoloader
 require '../vendor/autoload.php';
 
@@ -62,6 +63,8 @@ $route = new Route();
 
 // получаем контроллер
 $controller = $route->getController();
+
+
 // выполнение
 $controller->index();
 
