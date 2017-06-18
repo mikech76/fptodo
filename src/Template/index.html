@@ -3,11 +3,11 @@
 	<head>
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1">
-		<title>Template • TodoMVC</title>
+		<title>Mikech ToDo app</title>
 		<link rel="stylesheet" href="node_modules/todomvc-common/base.css">
 		<link rel="stylesheet" href="node_modules/todomvc-app-css/index.css">
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
-		<!-- CSS overrides - remove if you don't need it -->
+        <!-- CSS overrides - remove if you don't need it -->
 		<link rel="stylesheet" href="css/app.css">
 
 
@@ -70,7 +70,7 @@
 				<hr>
 				<h1><i class="fa fa-share-alt-square" aria-hidden="true"></i> Share</h1>
 				<form>
-					<div >
+					<div>
 						<input type="text" id="share_new" placeholder="Share to user name">
 						<b id="share_add_edit" class="todo_button" title="Share to Edit">
 							🎨
@@ -101,41 +101,38 @@
 
     </aside>
 
+
+    <template id="taskLiTmp">
+        <li>
+            <div class="view">
+                <input class="toggle" type="checkbox">
+                <label>Buy a unicorn</label>
+                <button class="destroy"></button>
+            </div>
+            <input class="edit" value="Rule the web">
+        </li>
+    </template>
+
     <section id="todoapp" class="todoapp" class="user_on">
 		<header class="header">
-			<h1>todos</h1>
+			<h1><i class="fa fa-lock" aria-hidden="true"></i>todos</h1>
 			<input class="new-todo" placeholder="What needs to be done?" autofocus>
 		</header>
-		<!-- This section should be hidden by default and shown when there are todos -->
+        <!-- This section should be hidden by default and shown when there are todos -->
 		<section class="main">
-			<input class="toggle-all" type="checkbox">
-			<label for="toggle-all">Mark all as complete</label>
-			<ul class="todo-list">
+			<input class="toggle-all" id="toggle-all" type="checkbox">
+			<label for="toggle-all" class="toggle-all-label">Mark all as complete</label>
+			<ul class="todo-list" id="todo-list">
 				<!-- These are here just to show the structure of the list items -->
-				<!-- List items should get the class `editing` when editing and `completed` when marked as completed -->
-				<li class="completed">
-					<div class="view">
-						<input class="toggle" type="checkbox" checked>
-						<label>Taste JavaScript</label>
-						<button class="destroy"></button>
-					</div>
-					<input class="edit" value="Create a TodoMVC template">
-				</li>
-				<li>
-					<div class="view">
-						<input class="toggle" type="checkbox">
-						<label>Buy a unicorn</label>
-						<button class="destroy"></button>
-					</div>
-					<input class="edit" value="Rule the web">
-				</li>
+                <!-- List items should get the class `editing` when editing and `completed` when marked as completed -->
+
 			</ul>
 		</section>
-		<!-- This footer should hidden by default and shown when there are todos -->
+        <!-- This footer should hidden by default and shown when there are todos -->
 		<footer class="footer">
 			<!-- This should be `0 items left` by default -->
 			<span class="todo-count"><strong>0</strong> item left</span>
-			<!-- Remove this if you don't implement routing -->
+            <!-- Remove this if you don't implement routing -->
 			<ul class="filters">
 				<li>
 					<a class="selected" href="#/">All</a>
@@ -147,7 +144,7 @@
 					<a href="#/completed">Completed</a>
 				</li>
 			</ul>
-			<!-- Hidden if no completed items are left ↓ -->
+            <!-- Hidden if no completed items are left ↓ -->
 			<button class="clear-completed">Clear completed</button>
 		</footer>
 	</section>
@@ -157,8 +154,8 @@
 		<p id="error"></p>
 
 	</footer>
-	<!-- Scripts here. Don't remove ↓ -->
-	<!---->
+    <!-- Scripts here. Don't remove ↓ -->
+    <!---->
 	<script src="node_modules/todomvc-common/base.js"></script>
 
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore-min.js"></script>

@@ -12,7 +12,7 @@ class MyException extends \Exception
 {
     public function __construct($error, $message, $code = 0, \Exception $previous = null)
     {
-        parent::__construct(json_encode(array($error => $message)), $code, $previous);
+        parent::__construct(json_encode([$error => $message]), $code, $previous);
     }
 
     public function get()
@@ -22,6 +22,6 @@ class MyException extends \Exception
 
     public static function go($exception)
     {
-        throw  new self($exception[0], $exception[1]) ;
+        throw  new self($exception[0], $exception[1]);
     }
 }

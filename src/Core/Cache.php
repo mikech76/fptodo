@@ -12,11 +12,12 @@ use Core\Database;
 
 /**
  * Class Cache - Эмуляция Memcache
+ *
  * @package Core
  */
 class Cache
 {
-    protected static $_instance = array();
+    protected static $_instance = [];
 
     /**
      * @var string Сессия приложения/префикс
@@ -27,23 +28,26 @@ class Cache
 
     /**
      * Cache constructor.
+     *
      * @param $modelName
      */
     protected function __construct($modelName)
     {
-        $this->db = Database::getInstance();
+        $this->db           = Database::getInstance();
         $this->_cacheSessid = $modelName;
     }
 
     /**
      * Получить кеш-инстанс для модели
+     *
      * @param string $modelName
+     *
      * @return mixed
      */
     public static function getInstance($modelName)
     {
         $modelName = strtr($modelName, '\\', '-');
-        if (!array_key_exists($modelName, self::$_instance) || self::$_instance[$modelName] === null) {
+        if (! array_key_exists($modelName, self::$_instance) || self::$_instance[$modelName] === null) {
             self::$_instance[$modelName] = new self($modelName);
         }
 
@@ -51,40 +55,34 @@ class Cache
     }
 
     /**
-     * @param $do
-     * @param $id
+     * @param       $do
+     * @param       $id
      * @param mixed $value
+     *
      * @return mixed
      */
     protected function _do($do, $id, $value = null)
     {
-
-            return null;
-
-        $return = null;
+        // disable Cache
+       // return null;
 
         switch ($do) {
             case 'get':
-                $return = $this->db->getOne(
-                    'SELECT val FROM memcache WHERE idkey=?s', $this->_cacheSessid . $id
-                );
+                $return =
+                    $this->db->getOne('SELECT val FROM memcache WHERE idkey=?s', $this->_cacheSessid . $id);
                 return unserialize($return);
                 break;
 
             case 'set':
-                $data = array('idkey' => $this->_cacheSessid . $id, 'val' => serialize($value));
-                $this->db->query(
-                    'INSERT INTO memcache SET ?u ON DUPLICATE KEY UPDATE ?u', $data, $data
-                );
+                $data = ['idkey' => $this->_cacheSessid . $id, 'val' => serialize($value),];
+                $this->db->query('INSERT INTO memcache SET ?u ON DUPLICATE KEY UPDATE ?u', $data, $data);
                 break;
 
             case 'delete':
-                $this->db->query(
-                    'DELETE FROM memcache WHERE idkey=?s', $this->_cacheSessid . $id
-                );
+                $this->db->query('DELETE FROM memcache WHERE idkey=?s', $this->_cacheSessid . $id);
         }
 
-        return $return;
+        return null;
     }
 
     /**
@@ -92,14 +90,14 @@ class Cache
      */
     public function clear()
     {
-        $this->db->query(
-            'TRUNCATE TABLE memcache'
-        );
+        $this->db->query('TRUNCATE TABLE memcache');
     }
 
     /**
      * Возвращает модель из кеша
+     *
      * @param $id
+     *
      * @return Model
      */
     public function get($id)
@@ -109,6 +107,7 @@ class Cache
 
     /**
      * Сохранияет модель в кеш
+     *
      * @param \Core\Model $model
      */
     public function set(Model $model)
@@ -118,6 +117,7 @@ class Cache
 
     /**
      * @param $key
+     *
      * @return mixed
      */
     public function getValue($key)
@@ -136,6 +136,7 @@ class Cache
 
     /**
      * удаляет кеш модели
+     *
      * @param $key
      */
     public function delete($key)

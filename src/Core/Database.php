@@ -8,23 +8,21 @@
 
 namespace Core;
 
-
 class Database
 {
 
     protected static $_instance;
     protected static $db;
 
-
     private function __construct()
     {
-        $opts = array(
+        $opts = [
             'user'    => USER,
             'pass'    => PASSWORD,
             'db'      => NAME_BD,
             'charset' => 'utf8',
             'host'    => HOST,
-        );
+        ];
 
         self::$db = new \SafeMySQL($opts);
     }

@@ -12,26 +12,24 @@ use Model\TodoTask;
 
 //use Model\TodoTask;
 
-define("SHARE_DELETE", 0);
-define("SHARE_OWNER", 1);
-define("SHARE_EDIT", 2);
-define("SHARE_SEE", 3);
+define('SHARE_DELETE', 0);
+define('SHARE_OWNER', 1);
+define('SHARE_EDIT', 2);
+define('SHARE_SEE', 3);
 
-define("TASK_DELETE", 0);
-define("TASK_OPEN", 1);
-define("TASK_CLOSE", 2);
-
+define('TASK_DELETE', 0);
+define('TASK_OPEN', 1);
+define('TASK_CLOSE', 2);
 
 class TodoController extends Controller
 {
     /**
      * @var array Данные
      */
-    private $data = array();
+    private $data = [];
 
     public function __construct()
     {
-
     }
 
     /**
@@ -54,7 +52,6 @@ class TodoController extends Controller
 
             // Операции с Задачами
             $this->data['todotask'] = $this->todoTaskActions();
-
         } catch (MyException $e) {
             $this->data['error'] = $e->get();
         }
@@ -66,6 +63,7 @@ class TodoController extends Controller
 
     /**
      * Операции над Юзером
+     *
      * @return User
      */
     private function userActions()
@@ -143,7 +141,7 @@ class TodoController extends Controller
 
     /**
      * Server-Sent Events / event-stream
-     * @test http://mikech.zapto.org/fptodo/?route=post&action=sse&todolist_id=12
+     * @test http://mysite/?route=post&action=sse&todolist_id=12
      */
     private function sseActions()
     {
@@ -154,10 +152,9 @@ class TodoController extends Controller
             $user = User::auth();
 
             $lastEventId = isset($_SERVER["HTTP_LAST_EVENT_ID"]) ? $_SERVER["HTTP_LAST_EVENT_ID"] : 0;
-            $count = 0;
-            while (++$count < 60) {
+            $count       = 0;
+            while (++ $count < 60) {
                 set_time_limit(0);
-
 
                 $lastEventId = $this->sendEvent($user, $lastEventId);
 
@@ -170,8 +167,10 @@ class TodoController extends Controller
 
     /**
      * отправка порции Server-Sent Events в event-stream
-     * @param User $user
+     *
+     * @param User  $user
      * @param float $lastEventId
+     *
      * @return mixed $lastEventId
      */
     private function sendEvent($user, $lastEventId)
@@ -183,7 +182,8 @@ class TodoController extends Controller
         $todoListId = Request::getId('todolist_id');
 
         // проверка id списка
-        list($newTodoListId, $lastEventId) = $this->findCurrentTodoListId($todoLists, $todoListId, $lastEventId);
+        list($newTodoListId, $lastEventId) =
+            $this->findCurrentTodoListId($todoLists, $todoListId, $lastEventId);
 
         // фильтруем лишнее
         $todoLists = $this->filterNew($todoLists, $todoListId, $lastEventId);
@@ -194,13 +194,10 @@ class TodoController extends Controller
         // test ping
         // echo "event: ping" . PHP_EOL . "id: " . $lastEventId . PHP_EOL . 'data: {"time": "' . $lastEventId . ' = ' . date(DATE_ISO8601) . '"}' . PHP_EOL . PHP_EOL;
 
-        if (!empty($todoLists)) {
-            $message = array(
-                'lastEventId'         => $lastEventId,
-                'user'                => $user,
-                'current_todoList_id' => $newTodoListId,
-                'todolist'            => $todoLists,
-            );
+        if (! empty($todoLists)) {
+            $message =
+                ['lastEventId' => $lastEventId, 'user' => $user, 'current_todoList_id' => $newTodoListId,
+                 'todolist'    => $todoLists,];
 
             // Event
             echo "event: todo" . PHP_EOL;
@@ -218,18 +215,23 @@ class TodoController extends Controller
 
     /**
      * Проверка текущего листа
+     *
      * @param $todoLists
      * @param $todoListId
      * @param $lastEventId
+     *
      * @return array [$todoListId,$lastEventId]
      */
     private function findCurrentTodoListId($todoLists, $todoListId, $lastEventId)
     {
         // текущий лист не задан или чужой или удален
-        if (!$todoListId || !array_key_exists($todoListId, $todoLists) || !$todoLists[$todoListId]['todolist_mode']) {
+        if (! $todoListId ||
+            ! array_key_exists($todoListId, $todoLists) ||
+            ! $todoLists[$todoListId]['todolist_mode']
+        ) {
             // отдадим данные с начала
             $lastEventId = 0;
-            $todoListId = null;
+            $todoListId  = null;
             // установим список сами
             foreach ($todoLists as $todoList) {
                 if ($todoList['todolist_mode']) {
@@ -238,28 +240,29 @@ class TodoController extends Controller
                 }
             }
         }
-        return array($todoListId, $lastEventId);
+        return [$todoListId, $lastEventId,];
     }
-
 
     /**
      * Фильтрует только новые данные с последнего запроса
-     * @param array $todoLists - списки текущего юзера с шарами и таскамии
-     * @param int $todoListId - текущий список
-     * @param int $lastEventId - время последнего запроса
+     *
+     * @param array $todoLists   - списки текущего юзера с шарами и таскамии
+     * @param int   $todoListId  - текущий список
+     * @param int   $lastEventId - время последнего запроса
+     *
      * @return array $todoLists - отфильтрованный массив
      */
     private function filterNew($todoLists, $todoListId, $lastEventId)
     {
         // списки
         foreach ($todoLists as $listId => $list) {
-            // выберем текущий живой список если не выделен
-            if (!$todoListId && $list['todolist_mode']) {
+            // выберем неудаленный список если текущий=null
+            if (! $todoListId && $list['todolist_mode']) {
                 $todoListId = (int)$listId;
             }
 
             $todoLists[$listId]['user'] = $this->getShares4List($listId);
-           //  print_r($list['user']);
+            //  print_r($list['user']);
             // шары/юзеры
             foreach ($todoLists[$listId]['user'] as $shareId => $user) {
                 // если share_updated старая - удаляем
@@ -271,41 +274,38 @@ class TodoController extends Controller
             // задачи
             foreach ($todoLists[$listId]['todotask'] as $taskId => $task) {
                 // если task_updated старая - удаляем
-                if ($task['task_updated'] < $lastEventId) {
+                if ($task['task_updated'] < $lastEventId || ( ! $lastEventId && ! $task['status'] )) {
                     unset($todoLists[$listId]['todotask'][$taskId]);
                 }
             }
 
             // Если список устарел и у него нет задач и нет юзеров - удалить
-            if ( $todoLists[$listId]['todolist_updated'] < $lastEventId
-                && empty($todoLists[$listId]['todotask'])
-                && empty($todoLists[$listId]['user'])
+            if (( ! $lastEventId && ! $list['todolist_mode'] ) ||
+                $todoLists[$listId]['todolist_updated'] < $lastEventId &&
+                empty($todoLists[$listId]['todotask']) &&
+                empty($todoLists[$listId]['user'])
             ) {
                 unset($todoLists[$listId]);
             } elseif ($todoListId != $listId) {
                 // если список не текущий - то удалить его задачи
-                $todoLists[$listId]['todotask'] = array();
-                $todoLists[$listId]['user'] = array();
+                $todoLists[$listId]['todotask'] = [];
+                $todoLists[$listId]['user']     = [];
             }
         }
- // print_r($todoLists);
+        // print_r($todoLists);
         return $todoLists;
     }
 
     private function getShares4List($todoListId)
     {
         $todoList = TodoList::load($todoListId);
-        $shares = $todoList->loadShares();
-        $userData = array();
+        $shares   = $todoList->loadShares();
+        $userData = [];
         foreach ($shares as $share) {
             $userData[$share['id']] =
-                array(
-                    'user_id'       => $share['user_id'],
-                    'user_name'     => $share['login'],
-                    'share_id'      => $share['id'],
-                    'share_mode'    => $share['mode'],
-                    'share_updated' => $share['updated'],
-                );
+                ['user_id'       => $share['user_id'], 'user_name' => $share['login'],
+                 'share_id'      => $share['id'], 'share_mode' => $share['mode'],
+                 'share_updated' => $share['updated'],];
         }
         return $userData;
     }

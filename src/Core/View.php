@@ -11,12 +11,14 @@ namespace Core;
 /**
  * Базовый Вид
  * Class View
+ *
  * @package Core
  */
 class View
 {
     /**
      * Вывод Html файла
+     *
      * @param $data
      * @param $template
      */
@@ -27,6 +29,7 @@ class View
 
     /**
      * Вывод Json строки
+     *
      * @param $data
      */
     public function renderJson($data)
@@ -36,6 +39,7 @@ class View
 
     /**
      * Вывод Server-side event строки
+     *
      * @param $data
      */
     public function renderSSE($data)
@@ -45,9 +49,11 @@ class View
 
     /**
      * Вывод данных
-     * @param $type типа вывода {html|json}
-     * @param $data данные
+     *
+     * @param $type     типа вывода {html|json}
+     * @param $data     данные
      * @param $template файл шаблона
+     *
      * @throws \Exception
      */
     public function render($type, $data, $template)
@@ -80,6 +86,5 @@ class View
 
         echo $output;
     }
-
 
 }

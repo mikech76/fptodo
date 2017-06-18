@@ -54,14 +54,34 @@ remove this file if not
 
 .todolist_mode_1:before, .share_mode_1:before {
     content: '👮 '; /* owner */
-
 }
 
 .todolist_mode_2:before, .share_mode_2:before {
     content: '🎨 '; /* edit */
-
 }
 
 .todolist_mode_3:before, .share_mode_3:before {
     content: '🐵 '; /* see */
+}
+
+#todoapp.disabled .destroy, #todoapp.disabled .clear-completed {
+    display: none;
+}
+
+#todoapp .header i {
+    font-size: 54px;
+    visibility: hidden;
+    color: #cc9a9a;
+}
+
+#todoapp.disabled .header i {
+    font-size: 54px;
+    visibility: visible;
+    color: #cc9a9a;
+}
+
+#todoapp.disabled label.toggle-all-label,
+#todoapp.disabled #toggle-all,
+#todoapp.disabled .new-todo {
+    visibility: hidden;
 }

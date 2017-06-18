@@ -13,9 +13,10 @@ class Model
 
     /**
      * ошибки модели
+     *
      * @var array
      */
-    protected $error = array();
+    protected $error = [];
 
     /**
      * Model constructor.
@@ -26,6 +27,7 @@ class Model
 
     /**
      * Записывает ошибку
+     *
      * @param $error
      */
     public function setError($error, $key = null)
@@ -46,20 +48,23 @@ class Model
 
     /**
      * Получить переменную из сессии
+     *
      * @param string $name
+     *
      * @return mixed
      */
     public static function getSession($name)
     {
-        return (array_key_exists($name, $_COOKIE) && $_COOKIE[$name]) ? $_COOKIE[$name] : null;
+        return ( array_key_exists($name, $_COOKIE) && $_COOKIE[$name] ) ? $_COOKIE[$name] : null;
     }
 
     /**
      * Записывает переменную в сессию
+     *
      * @param $name
      * @param $value
      */
-    public static function setSession($name, $value=null)
+    public static function setSession($name, $value = null)
     {
         setcookie($name, $value, strtotime('+1 Month'));
     }

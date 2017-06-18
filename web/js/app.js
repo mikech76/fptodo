@@ -1,17 +1,29 @@
-// Server-Side Event
-var evtSource = null;
-// авторизованный юзер
-var current_user = null;
-// текущий список
-var current_todoList_id = null;
-
-
 (function (window) {
     'use strict';
 
+    // Server-Side Event
+    var evtSource = null;
+    // авторизованный юзер
+    var current_user = null;
+    // текущий список
+    var current_todoList_id = null;
+
+    const SHARE_DELETE = 0;
+    const SHARE_OWNER = 1;
+    const SHARE_EDIT = 2;
+    const SHARE_SEE = 3;
+
+    const TASK_DELETE = 0;
+    const TASK_OPEN = 1;
+    const TASK_CLOSE = 2;
+
+    const FILTER_ALL = 'All';
+    const FILTER_ACTIVE = 'Active';
+    const FILTER_COMPLETED = 'Completed';
+
     // ==========================  Запуск ==========================
 
-    function initTodoListPanel() {
+    function initTodoListPanel () {
 
         $('#todolist_name').text('');
         $('#todolist_editor').hide();
@@ -19,26 +31,28 @@ var current_todoList_id = null;
         $('#todolists').hide();
     }
 
-    function initSharePanel() {
+    function initSharePanel () {
         $('#shares option').remove();
         $('#share-panel').hide();
 
     }
 
-    function initTaskPanel() {
-        $('#todoapp').hide();
-        // - таски
+    function initTaskPanel (allClear) {
+        $('#todo-list li').remove();
+        $('#todoapp').hide().removeClass('disabled');
+
+        allClear ? filterTask($('#todoapp .filters a.selected')) : filterTask($('#todoapp .filters a:first'));
     }
 
     initTodoListPanel();
     initSharePanel();
-    initTaskPanel();
+    initTaskPanel(true);
 
     // проверка авторизации
     todoPost({}, userAuth);
 
     // идентификация пользователя
-    function userAuth(data) {
+    function userAuth (data) {
 
         if (data.user) {
             //авторизован
@@ -155,7 +169,7 @@ var current_todoList_id = null;
             // очистить Шары
             initSharePanel();
 
-            // todo  очистить таски
+            //   очистить таски
             initTaskPanel();
 
             startSSE();
@@ -165,7 +179,7 @@ var current_todoList_id = null;
     // =====================  Редактирование списка задач ======================
 
     // создать список
-    // http://mikech.zapto.org/fptodo/?route=post&action=todolist_create&todolist_name=На%20пикник
+    // @test http://mysite/?route=post&action=todolist_create&todolist_name=На%20пикник
     $("#todolist_new").change(function () {
         var todolist_name = $("#todolist_new").val().trim();
         if (todolist_name.length) {
@@ -184,6 +198,9 @@ var current_todoList_id = null;
             errorlog({error: 'Имя списка не может быть пустым!'});
         }
         $("#todolist_new").val('');
+        initSharePanel();
+
+        initTaskPanel();
     });
 
     // переименование
@@ -236,7 +253,6 @@ var current_todoList_id = null;
             share_mode: 0 // delete
         }, function (data) {
             // проверить на ошибки data.error
-            log(data);
 
             startSSE();
         });
@@ -253,7 +269,7 @@ var current_todoList_id = null;
     // -------------------------- Шары ---------------------------------------
 
     // ===================  Выбор шары ==========================
-    function shareControls() {
+    function shareControls () {
 
         var todoListMode = $('#todolists option:selected').attr('data-todolist_mode');
         if (todoListMode != 1) {
@@ -293,7 +309,7 @@ var current_todoList_id = null;
     });
 
     // ===================  Сменить статус шары ==========================
-    function shareSetMode(user_login, mode) {
+    function shareSetMode (user_login, mode) {
         if (!user_login.length) {
             return;
         }
@@ -305,7 +321,7 @@ var current_todoList_id = null;
             share_mode: mode
         }, function (data) {
             // проверить на ошибки data.error
-            log(data);
+
             if (data && data.todolist) {
 
             }
@@ -315,38 +331,222 @@ var current_todoList_id = null;
         //  $("#share_edit_edit, #share_edit_see, #share_edit_delete").hide();
     }
 
-    // переключить в режим чтения
+    // переключить в режим редактирования
     $("#share_edit_edit").click(function () {
-        shareSetMode($("#share_editor").attr('data-user_login'), 2);
+        shareSetMode($("#share_editor").attr('data-user_login'), SHARE_EDIT);
     });
 
-    // переключить в режим редактирования
+    // переключить в режим чтения
     $("#share_edit_see").click(function () {
-        shareSetMode($("#share_editor").attr('data-user_login'), 3);
+        shareSetMode($("#share_editor").attr('data-user_login'), SHARE_SEE);
     });
 
     // удалить шару
     $("#share_edit_delete").click(function () {
-        shareSetMode($("#share_editor").attr('data-user_login'), 0);
+        shareSetMode($("#share_editor").attr('data-user_login'), SHARE_DELETE);
         // удалить шару из списка
         $("#shares option[value=" + $("#share_editor").attr('data-share_id') + "]").remove();
     });
 
     // создать шару / редактор
     $("#share_add_edit").click(function () {
-        shareSetMode($("#share_new").val(), 2);
+        shareSetMode($("#share_new").val(), SHARE_EDIT);
     });
 
     // создать шару / смотритель
     $("#share_add_see").click(function () {
-        shareSetMode($("#share_new").val(), 3);
+        shareSetMode($("#share_new").val(), SHARE_SEE);
     });
 
-    // -------------------------- Задачи ----------------------------------------
 
+    // ------------------------------ Задачи ---------------------------------------
+
+    // ==========================  Фильтры задач ==========================
+
+    /**
+     * Применяет фильтр и устанавливает счетчик
+     * @param filter
+     */
+    function filterTask (filter) {
+
+        // по умолчанию первый FILTER_ALL
+        if (filter === undefined) {
+            filter = $('#todoapp .filters a:first');
+        }
+
+        // все отключим
+        $('#todoapp .filters a').removeClass('selected');
+
+        switch (filter.text()) {
+
+            case FILTER_ALL:
+                $('#todo-list li').show();
+                break;
+
+            case FILTER_ACTIVE:
+                $('#todo-list li:not(.completed)').show();
+                $('#todo-list li.completed').hide();
+                break;
+
+            case FILTER_COMPLETED:
+                $('#todo-list li.completed').show();
+                $('#todo-list li:not(.completed)').hide();
+                break;
+        }
+        // выбранный включим
+        filter.addClass('selected');
+
+        // счетчик активных
+        $('#todoapp .footer .todo-count strong').text($('#todo-list li:not(.completed)').length);
+        // исправляем все чекбоксы
+    }
+
+    // фильтры
+    $('#todoapp .filters a').click(function () {
+        filterTask($(this));
+    });
+
+
+    // ==========================  Создать задачу ==========================
+
+    $("#todoapp .new-todo").change(function () {
+        var task_name_new = $(this).val().trim();
+
+        if (task_name_new.length) {
+            todoPost({
+                action: 'todotask_create',
+                todotask_todolist_id: current_todoList_id,
+                todotask_name: task_name_new
+            }, function (data) {
+
+                // проверить на ошибки data.error
+                if (data && data.todotask) {
+                    // обновляем  дату списка чтобы не светился
+                    var opt = $('#list-panel option[data-todolist_id=' + data.todoListId + ']');
+                    opt.attr('data-todolist_updated', data.updated);
+                }
+                startSSE();
+            }, function () {
+                errorlog({error: 'Задача не обновлена'});
+            });
+        } else {
+            errorlog({error: 'Имя задачи не может быть пустым!'});
+        }
+        $("#todoapp .new-todo").val('');
+    });
+
+    // ==========================  Сменить статус задачи ==========================
+    $("#todo-list").on("change", ".toggle", function () {
+        var task = $(this).parents('li:first').attr('data-task_id');
+        var status = $(this).prop("checked") ? TASK_CLOSE : TASK_OPEN;
+        taskSetMode(task, status);
+    });
+
+    // ==========================  Сменить статус группы задач ==========================
+    $("#todoapp .toggle-all").change(function () {
+        // есть закрытые
+        var status = $("#todo-list li:not([data-task_status=2])").length ? TASK_CLOSE : TASK_OPEN;
+
+        taskSetMode(current_todoList_id, status, true);
+    });
+
+    // ============================  Удалить задачу ===============================
+    $("#todo-list").on("click", ".destroy", function () {
+        var task = $(this).parents('li:first');
+        var status = TASK_DELETE; // удалить
+
+        taskSetMode(task.attr('data-task_id'), status);
+        task.remove();
+    });
+
+    // ===================  Удалить все закрытые задачи =======================
+    $("#todoapp .clear-completed").click(function () {
+        // есть закрытые
+
+        if ($("#todoapp:not(.disabled) #todo-list li[data-task_status=2]").length) {
+            taskSetMode(current_todoList_id, TASK_DELETE, true);
+            $("#todo-list li[data-task_status=2]").remove();
+        }
+    });
+
+    /**
+     * Сменить статус одной задачи, или всех в списке
+     * @param id - todotask_id или todolist_id
+     * @param status
+     * @param group - true если применить ко всему списку
+     */
+    function taskSetMode (id, status, group) {
+        var params = {
+            action: 'todotask_update',
+            todotask_status: status
+        };
+
+        if (group) {
+            params.todolist_id = id;
+        } else {
+            params.todotask_id = id;
+        }
+
+        todoPost(params, function (data) {
+
+            // проверить на ошибки data.error
+            if (data && data.todotask) {
+                // обновляем  дату списка чтобы не светился
+                var opt = $('#list-panel option[data-todolist_id=' + data.todotask.todoListId + ']');
+
+                opt.attr('data-todolist_updated', data.todotask.updated);
+            }
+            startSSE();
+        });
+
+        filterTask($('#todoapp .filters a.selected'));
+    }
+
+
+    // ======================  Переименовать задачу  ==========================
+    // открыть редактирование имени
+    $("#todo-list").on("dblclick", "label", function () {
+        var task = $(this).parents('li:first')
+        task.find('.edit')
+            .val(
+                task.find('.view').hide().find('label').text())
+            .show()
+            .focus()
+            .one('focusout', function () {
+                $(this).hide().parent().find('.view').show().find('label').text($(this).val());
+            })
+            .one('change', function () {
+                // новое имя
+                var todotask_name_new = $(this).val().trim();
+
+                if (todotask_name_new.length) {
+                    // отправляем
+                    todoPost({
+                        action: 'todotask_update',
+                        todotask_id: task.attr('data-task_id'),
+                        todotask_name: todotask_name_new
+                    }, function (data) {
+                        //log(data);
+                        // проверить на ошибки data.error
+                        if (data && data.todotask) {
+                            // обновляем  дату списка чтобы не светился
+                            var opt = $('#list-panel option[data-todolist_id=' + data.todotask.todoListId + ']');
+                            opt.attr('data-todolist_updated', data.todotask.updated);
+                        }
+                        startSSE();
+                    });
+
+
+                } else {
+                    errorlog({error: 'Имя задачи не может быть пустым!'});
+                }
+                $(this).focusout();
+            });
+
+    });
 
     // ==========================  Отрисовка Списков ==========================
-    function renderTodoList(todolist) {
+    function renderTodoList (todolist) {
         // заголовок текущего списка
         if (current_todoList_id) {
             if (todolist[current_todoList_id]) {
@@ -365,7 +565,7 @@ var current_todoList_id = null;
                 if (opt.length) {
                     if (opt.attr('data-todolist_updated') < val.todolist_updated) {
                         // обновить
-                        if (val.todolist_mode != 0) {
+                        if (val.todolist_mode != '0') {
                             opt.removeClass();
                             opt.addClass('todolist_mode_' + val.todolist_mode);
                             opt.addClass('updated').attr('data-todolist_updated', val.todolist_updated);
@@ -377,7 +577,7 @@ var current_todoList_id = null;
                     }
                 } else {
                     // создаем новый
-                    if (val.todolist_mode != 0) {
+                    if (val.todolist_mode != '0') {
                         select.append(
                             $("<option/>", {value: key, text: val.todolist_name})
                                 .attr('data-todolist_id', val.todolist_id)
@@ -389,12 +589,13 @@ var current_todoList_id = null;
                 }
             }
         );
+        $('#list-panel option[data-todolist_id=' + current_todoList_id + ']').prop('selected', true);
         selectResize(select);
     }
 
 
     // ==========================  Отрисовка Шар ==========================
-    function renderShareList(todolist) {
+    function renderShareList (todolist) {
 
         var select = $('#shares');
         if (todolist[current_todoList_id]) {
@@ -407,7 +608,7 @@ var current_todoList_id = null;
                     if (opt.length) {
                         if (opt.attr('data-share_updated') < val.share_updated) {
                             // обновить
-                            if (val.share_mode != 0) {
+                            if (val.share_mode != SHARE_DELETE) {
                                 opt.addClass('updated')
                                     .attr('data-share_updated', val.share_updated)
                                     .attr('data-share_mode', val.share_mode)
@@ -420,7 +621,7 @@ var current_todoList_id = null;
                         }
                     } else {
                         // создаем новый
-                        if (val.share_mode != 0) {
+                        if (val.share_mode != SHARE_DELETE) {
                             select.append(
                                 $("<option/>", {value: key, text: val.user_name})
                                     .attr('data-user_login', val.user_name)
@@ -440,7 +641,7 @@ var current_todoList_id = null;
         var colOpts = selectResize(select);
         if (colOpts) {
             shareControls();
-
+            $('#todoapp').show();
         } else {
             $('#share-panel .share-control').hide();
         }
@@ -448,13 +649,13 @@ var current_todoList_id = null;
 
     }
 
-    function selectResize(select) {
+    function selectResize (select) {
         var colOpts = select.find('option').length;
 
         if (colOpts) {
             select.attr('size', colOpts + 1);
             select.show();
-            select.find('option:first').attr('selected', 1);
+            select.find('option:first').attr('selected', true);
 
         } else {
             select.hide();
@@ -464,6 +665,68 @@ var current_todoList_id = null;
 
     // ===============================  Отрисовка задач  =======================================
 
+    function renderTaskList (todolist) {
+
+        var todoTasks = $('#todo-list');
+
+        $.each(todolist[current_todoList_id].todotask, function (key, val) {
+
+            var task = todoTasks.find('li[data-task_id=' + key + ']');
+            // такая задача  уже есть
+            if (task.length) {
+                // и она устарела
+                if (task.attr('data-task_updated') < val.task_updated) {
+                    // обновить
+                    log(val);
+                    if (val.status != TASK_DELETE) {
+                        if (val.status == TASK_OPEN) {
+                            task.removeClass('completed');
+                            task.find('.toggle').prop("checked", false);
+                        } else {
+                            // TASK_CLOSE
+                            task.addClass('completed');
+                            task.find('.toggle').prop("checked", true);
+                        }
+                        task.find('label').text(val.task_name);
+                        task.attr('data-task_status', val.status);
+                    } else {
+                        task.remove();
+                    }
+                }
+            } else {
+                // создаем новый
+                if (val.status != TASK_DELETE) {
+                    task = $($("#taskLiTmp").html());
+
+                    task.find('label').text(val.task_name);
+                    if (val.status == TASK_CLOSE) {
+                        task.addClass('completed');
+                        task.find('.toggle').prop("checked", true);
+                    }
+                    task.attr('data-task_status', val.status)
+                        .attr('data-task_id', val.task_id)
+                        .attr('data-task_updated', val.task_updated);
+
+                    todoTasks.append(task);
+                }
+            }
+
+        });
+        $('#todoapp').show();
+        if (todolist[current_todoList_id].todolist_mode == SHARE_SEE) {
+            // заблокировать форму
+            $('#todoapp').addClass('disabled');
+            // элементы
+            $('#todoapp input').prop('disabled', true);
+        } else {
+            // разблокировать форму
+            $('#todoapp').removeClass('disabled');
+            // элементы
+            $('#todoapp input').prop('disabled', false);
+        }
+        filterTask($('#todoapp .filters a.selected'));
+    }
+
 
     // =================================== Utils ===============================================
     /**
@@ -472,7 +735,7 @@ var current_todoList_id = null;
      * @param success
      * @param error
      */
-    function todoPost(param, success, error) {
+    function todoPost (param, success, error) {
 
         // log(param);
         $.ajax({
@@ -489,12 +752,11 @@ var current_todoList_id = null;
      * Обработка принятых данных
      * @param data
      */
-    function evtSourceOnMessage(data) {
+    function evtSourceOnMessage (data) {
         //порция данных
         log(data);
 
-        log('set current_todoList_id = ');
-        log(parseInt(data.current_todoList_id));
+        log('set current_todoList_id = ' + parseInt(data.current_todoList_id));
 
         // сменился ли текущий список
         var reconn = current_todoList_id != data.current_todoList_id;
@@ -508,6 +770,7 @@ var current_todoList_id = null;
                 errorlog(data.error);
                 return;
             }
+
             // рисуем списки
             renderTodoList(data.todolist);
 
@@ -515,7 +778,9 @@ var current_todoList_id = null;
             renderShareList(data.todolist);
 
             // рисуем таски
-            // renderTask(data.todolist);
+            if (data.todolist[current_todoList_id]) {
+                renderTaskList(data.todolist);
+            }
         }
         // переоткрываем поток с параметром текущего списка
         if (reconn) {
@@ -527,7 +792,7 @@ var current_todoList_id = null;
      * Инициализация SSE stream
      * @param data
      */
-    function startSSE(data) {
+    function startSSE (data) {
         // запуск sse с выводом ошибки
         if (data && data.error) {
             errorlog(data.error)
@@ -570,14 +835,14 @@ var current_todoList_id = null;
     }
 
     // закрыть SSE
-    function stopSSE() {
+    function stopSSE () {
         if (evtSource) {
             evtSource.close();
         }
     }
 
     // вывод текста ошибки
-    function errorlog(error) {
+    function errorlog (error) {
         // очистить
         $('#error').text('');
         // показать
@@ -587,7 +852,7 @@ var current_todoList_id = null;
     }
 
     // лог
-    function log(val) {
+    function log (val) {
         console.log(val);
     }
 

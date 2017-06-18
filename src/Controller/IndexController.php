@@ -24,6 +24,6 @@ class IndexController extends Controller
     {
         // создаем стандартный Вид
         $view = new View();
-        $view->renderHtml(array(), $this->template);
+        $view->renderHtml([], $this->template);
     }
 }

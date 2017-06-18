@@ -12,6 +12,7 @@ abstract class Controller
 {
     /**
      * файл шаблона
+     *
      * @var string
      */
     protected $template;

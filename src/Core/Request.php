@@ -7,20 +7,36 @@ use Core\MyException;
 /**
  * Валидатор параметров
  * Class Request
+ *
  * @package Core
  */
 class Request
 {
     /**
-     * Возвращает параметр при наличии или $default|throw $default
-     * @param $key
+     * Проверка на существование параметра
+     *
+     * @param      $key
      * @param null $default
+     *
+     * @return bool
+     */
+    static public function is($key, $default = null)
+    {
+        return isset( $_REQUEST[$key] );
+    }
+
+    /**
+     * Возвращает параметр при наличии или $default|throw $default
+     *
+     * @param      $key
+     * @param null $default
+     *
      * @return null
      * @throws MyException
      */
     static public function get($key, $default = null)
     {
-        if (isset($_REQUEST[$key])) {
+        if (isset( $_REQUEST[$key] )) {
             return $_REQUEST[$key];
         }
 
@@ -32,18 +48,22 @@ class Request
 
     /**
      * Возвращает параметр с экранированными спецсимволами
-     * @param $key
+     *
+     * @param      $key
      * @param null $default
+     *
      * @return string
      */
     static public function getSafeString($key, $default = null)
     {
-        return (htmlspecialchars(self::get($key, $default)));
+        return ( htmlspecialchars(self::get($key, $default)) );
     }
 
     /**
      * Возвращает целочисленный параметр
+     *
      * @param $key
+     *
      * @return int
      */
     static public function getInteger($key)
@@ -53,7 +73,9 @@ class Request
 
     /**
      * Возвращает float
+     *
      * @param $key
+     *
      * @return float
      */
     static public function getFloat($key)
@@ -63,13 +85,14 @@ class Request
 
     static public function getId($key, $exception = null)
     {
-        return (int)self::get($key, 0);
+        $id = self::get($key);
+        return $id !== null ? (int)$id : null;
     }
 
     static public function getName($key, $exception = null)
     {
         $name = trim(self::getSafeString($key, 0));
-        if ($exception instanceof MyException && !$name && strlen($name)>100) {
+        if ($exception instanceof MyException && ! $name && strlen($name) > 100) {
             MyException::go($exception);
         }
         return $name;
@@ -79,17 +102,16 @@ class Request
     {
         $login = trim(self::getSafeString($key, 0));
 
-        if ($exception instanceof MyException && !preg_match("/^[a-z0-9_-]{3,16}$/", $login)) {
+        if ($exception instanceof MyException && ! preg_match("/^[a-z0-9_-]{3,16}$/", $login)) {
             MyException::go($exception);
         }
         return $login;
-
     }
 
     static public function getPassword($key, $exception = null)
     {
         $password = trim(self::getSafeString($key, 0));
-        if ($exception instanceof MyException && !$password) {
+        if ($exception instanceof MyException && ! $password) {
             MyException::go($exception);
         }
         return $password;

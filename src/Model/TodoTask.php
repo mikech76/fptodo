@@ -15,31 +15,36 @@ use Core\MyException;
 
 /**
  * Class TodoTask
+ *
  * @package Model
- * Задача
+ *          Задача
  */
 class TodoTask extends Model
 {
     /**
      * Имя задачи
+     *
      * @var string
      */
     public $name;
 
     /**
      * Статус задачи
+     *
      * @var int
      */
     public $status;
 
     /**
      * ID списка
+     *
      * @var int
      */
     public $todoListId;
 
     /**
      * время обновления
+     *
      * @var float
      */
     public $updated;
@@ -50,104 +55,152 @@ class TodoTask extends Model
     public function __construct()
     {
         parent::__construct();
-
     }
 
     /**
      * Создание задачи
+     *
      * @param User $user
+     *
      * @return TodoTask
      * @throws MyException
-     * @test http://mikech.zapto.org/fptodo/?route=post&action=todotask_create&todotask_todolist_id=10&todotask_name=Заправиться
+     * @test http://mysite/?route=post&action=todotask_create&todotask_todolist_id=10&todotask_name=Заправиться
      */
     public static function create(User $user)
     {
         // список для задачи
-        $todoListId = Request::getId('todotask_todolist_id', array('todotask_todolist_id_bad', 'Не указан Id списка!'));
+        $todoListId =
+            Request::getId('todotask_todolist_id', ['todotask_todolist_id_bad', 'Не указан Id списка!',]);
 
-        $todoList = TodoList::load($todoListId, array('todotask_todolist_not_exist', 'Не найден список ' . $todoListId));
+        $todoList =
+            TodoList::load($todoListId, ['todotask_todolist_not_exist', 'Не найден список ' . $todoListId,]);
 
         // владелец связан со списком
-        $todoList->checkUserAccess(
-            $user,
-            array(SHARE_OWNER, SHARE_EDIT),
-            array('todolist_share_not_permission', 'Нет доступа к списку')
-        );
+        $todoList->checkUserAccess($user, [SHARE_OWNER, SHARE_EDIT,],
+            ['todolist_share_not_permission', 'Нет доступа к списку',]);
 
         // юзер - владелец | редактор, имеет право создавать задачу
-        $name = Request::getName('todotask_name', array('todotask_name_bad', 'Недопустимое имя списка'));
+        $name = Request::getName('todotask_name', ['todotask_name_bad', 'Недопустимое имя списка',]);
 
         // создаем задачу
         $db = Database::getInstance();
-        $db->query(
-            'INSERT INTO todotask(todolist_id,name,status,updated) VALUES (?i,?s,?i,?s)',
-            $todoListId, $name, TASK_OPEN, microtime(true)
-        );
-        $id = $db->insertId();
-        $todoTask = self::load($id, array('todotask_create_error', 'Ошибка создания списка!'));
+        $db->query('INSERT INTO todotask(todolist_id,name,status,updated) VALUES (?i,?s,?i,?s)', $todoListId,
+            $name, TASK_OPEN, microtime(true));
+
+        $id       = $db->insertId();
+        $todoTask = self::load($id, ['todotask_create_error', 'Ошибка создания списка!',]);
+
+        $todoList->clearSharesCache();
 
         return $todoTask;
     }
 
     /**
      * Обновление списка
+     *
      * @param User $user
+     *
      * @return TodoTask
      * @throws MyException
-     * @test http://mikech.zapto.org/fptodo/?route=post&action=todotask_update&todotask_id=4&todotask_status=2&todotask_name=швшлык
+     * @test http://mysite/?route=post&action=todotask_update&todotask_id=4&todotask_status=2&todotask_name=швшлык
      */
     public static function update(User $user)
     {
-        // Id задачи
-        $id = Request::getId('todotask_id', array('todotask_id_bad', 'Не указан Id задачи'));
-
-        // задача
-        $todoTask = self::load($id, array('todotask_not_exist', 'Не найдена задача ' . $id));
-
-        // список
-        $todoList = TodoList::load(
-            $todoTask->getTodoListId(),
-            array('todotask_todolist_not_exist', 'Не найден список ' . $todoTask->getTodoListId())
-        );
-
-        // владелец связан со списком
-        $todoList->checkUserAccess(
-            $user,
-            array(SHARE_OWNER, SHARE_EDIT),
-            array('todolist_share_not_permission', 'Нет доступа к списку')
-        );
-
-        // юзер - владелец | редактор, имеет право создавать задачу
-        $name = Request::getName('todotask_name', array('todotask_name_bad', 'Недопустимое имя списка'));
-
-        $fields = array();
-        $fields['name'] = $name;
+        $todolistId = null;
+        $status     = TASK_DELETE;
 
         // статус задачи
-        $status = Request::getInteger('todotask_status');
-        if (!in_array($status, array(TASK_DELETE, TASK_OPEN, TASK_CLOSE))) {
-            // статус задан  но невалиден
-            MyException::go(array('todotask_status_bad', 'Недопустимый статус задачи'));
-        }
-        $fields['status'] = $status;
+        if (Request::is('todotask_status')) {
+            $status = Request::getInteger('todotask_status');
+            if (! in_array($status, [TASK_DELETE, TASK_OPEN, TASK_CLOSE,])) {
+                // статус задан  но невалиден
+                MyException::go(['todotask_status_bad', 'Недопустимый статус задачи',]);
+            }
 
-        // изменить задачу
+            $fields['status'] = $status;
+            $oldStatus        = $status; // where: !=
+        } else {
+            $oldStatus = TASK_DELETE;
+        }
+
+        // есть список - групповая задача
+        if (Request::is('todolist_id')) {
+            // id листа
+            $todolistId = Request::getId('todolist_id');
+            // список
+            $todoList =
+                TodoList::load($todolistId,
+                    ['todotask_todolist_not_exist', 'Не найден список ' . $todolistId,]);
+
+            $id        = $todolistId;
+            $oldStatus = $oldStatus ? TASK_DELETE : TASK_OPEN;
+
+            $sql = 'UPDATE todotask SET ?u WHERE status!=?i AND status!=?i AND todolist_id=?i';
+        } else {
+            // только 1 задача
+            // Id задачи
+            $id = Request::getId('todotask_id', ['todotask_id_bad', 'Не указан Id задачи',]);
+
+            // задача
+            $todoTask = self::load($id, ['todotask_not_exist', 'Не найдена задача ' . $id,]);
+
+            // список задачи
+            $todoList =
+                TodoList::load($todoTask->getTodoListId(),
+                    ['todotask_todolist_not_exist', 'Не найден список ' . $todoTask->getTodoListId(),]);
+
+            // если задано имя
+            if (Request::is('todotask_name')) {
+                $name = Request::getName('todotask_name', ['todotask_name_bad', 'Недопустимое имя списка',]);
+
+                $fields['name'] = $name;
+            }
+            $sql = 'UPDATE todotask SET ?u WHERE status!=?i AND status!=?i AND id=?i';
+        }
+
+        // владелец связан со списком
+        $todoList->checkUserAccess($user, [SHARE_OWNER, SHARE_EDIT,],
+            ['todolist_share_not_permission', 'Нет доступа к списку',]);
+
+        // время изменения
         $fields['updated'] = microtime(true);
+
         $db = Database::getInstance();
-        $db->query('UPDATE todotask SET ?u WHERE id=?i ', $fields, $id);
+        // какие записи будут затронуты
+        if ($todolistId) {
+            $ids =
+                $db->getCol('SELECT id FROM todotask WHERE status!=?i AND status!=?i AND todolist_id=?i',
+                    TASK_DELETE, $oldStatus, $todolistId);
+        } else {
+            $ids = [$id];
+        }
+
+        // изменям в базе
+        if ($ids) {
+            $db->query($sql, $fields, TASK_DELETE, $oldStatus, $id);
+        }
 
         // очистить кеш
-        $cache = Cache::getInstance(__CLASS__);
-        $cache->delete($id);
-        $user->clearShares();
+        if ($ids) {
+            $cache = Cache::getInstance(__CLASS__);
+            // каждый измененный таск
+            foreach ($ids as $id) {
+                $cache->delete($id);
+            }
+            // весь лист и юзеры
+            $todoList->clearSharesCache();
 
-        $todoTask = self::load($id);
-        return $todoTask;
+            $todoTask = self::load($ids[0]);
+            return $todoTask;
+        }
+        return null;
     }
 
     /**
      * Загружает задачу
+     *
      * @param int $id
+     *
      * @return TodoTask
      * @throws MyException
      */
@@ -155,13 +208,13 @@ class TodoTask extends Model
     {
         $id = (int)$id;
         // из кеша
-        $cache = Cache::getInstance(__CLASS__);
+        $cache    = Cache::getInstance(__CLASS__);
         $todoTask = $cache->get($id);
         if ($todoTask) {
             return $todoTask;
         }
         // из базы
-        $db = Database::getInstance();
+        $db           = Database::getInstance();
         $todoTaskData = $db->getRow('SELECT * FROM todotask WHERE id=?s', $id);
 
         // если запись найдена, создаем объект
