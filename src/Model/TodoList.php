@@ -69,6 +69,9 @@ class TodoList extends Model
         ]);
         self::createShare($user, $todoList, SHARE_OWNER);
 
+        $todoList->clearSharesCache();
+        $todoList = $todoList = self::load($id);
+
         return $todoList;
     }
 

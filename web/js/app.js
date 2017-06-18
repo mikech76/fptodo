@@ -422,8 +422,8 @@
                 // проверить на ошибки data.error
                 if (data && data.todotask) {
                     // обновляем  дату списка чтобы не светился
-                    var opt = $('#list-panel option[data-todolist_id=' + data.todoListId + ']');
-                    opt.attr('data-todolist_updated', data.updated);
+                    var opt = $('#list-panel option[data-todolist_id=' + data.todotask.todoListId + ']');
+                    opt.attr('data-todolist_updated', data.todotask.updated);
                 }
                 startSSE();
             }, function () {
@@ -493,7 +493,6 @@
             if (data && data.todotask) {
                 // обновляем  дату списка чтобы не светился
                 var opt = $('#list-panel option[data-todolist_id=' + data.todotask.todoListId + ']');
-
                 opt.attr('data-todolist_updated', data.todotask.updated);
             }
             startSSE();
